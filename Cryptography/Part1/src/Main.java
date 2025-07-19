@@ -12,26 +12,35 @@ import java.util.Scanner;
 public class Main {
 
     public static void main(String[] args) {
-          Scanner input;
+        Scanner input;
         while (true) {
             byte[] fileBinary;
             byte[] passBinary;
 
-           input = new Scanner(System.in);
+            input = new Scanner(System.in);
+            int ShaSecLevel;
+            int ShakeSecLevel;
             try {
                 System.out.println("\nSHA-3/SHAKE encryption");
 
                 System.out.print("Please enter a security level for SHA-3 (224,256,384,512) " +
                         "> ");
-                int ShaSecLevel = Integer.parseInt(input.nextLine());
+                try {
+                    ShaSecLevel = Integer.parseInt(input.nextLine());
 
-                System.out.print("\n\nPlease enter a security level for SHAKE (128,256) > ");
+                    System.out.print("\n\nPlease enter a security level for SHAKE (128,256) > ");
 
-                int ShakeSecLevel = Integer.parseInt(input.nextLine());
+
+                    ShakeSecLevel = Integer.parseInt(input.nextLine());
+                } catch (NumberFormatException nfe) {
+                    System.out.println("Invalid response");
+                    continue;
+                }
 
                 System.out.print("Please enter the files path (Q to quit) > ");
 
                 String userInput = input.nextLine().replace("\"", "");
+
                 if (userInput.equalsIgnoreCase("q")) {
                     break;
                 }
