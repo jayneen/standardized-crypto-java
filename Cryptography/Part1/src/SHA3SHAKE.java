@@ -18,16 +18,12 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
     /**
      * The size of the partition from the plain text message.
      * <p>
-     * Formula: RATE = 1600-bits - (CAPACITY(suffix * 2))-bits
+     * Formula: RATE = (1600-bits) - ((CAPACITY(suffix * 2))-bits)
      * </P>
      */
     private int MY_RATE;
 
-
-
-    public SHA3SHAKE() {
-
-    }
+    public SHA3SHAKE() {}
 
     @Override
     public void init(int suffix) {
@@ -121,7 +117,6 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
      * @param out      hash value buffer (if null, this method allocates it with the required size)
      * @return the out buffer containing the desired hash value.
      */
-
     public static byte[] SHA3(int theSuffix, byte[] theState, byte[] out) {
 
         if (theSuffix != 224 && theSuffix != 256 && theSuffix != 384 && theSuffix != 512) {
@@ -159,14 +154,13 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
 
 
     /**
-     * Pads the remaining bytes that is less than the rate in bytes within accordance to the
+     * Pads the remaining bytes that are less than the rate in bytes within accordance to the
      * SHA3 and SHAKE padding requirements.
      *
      * @param theState      The message from the user.
      * @param theDomainCode either 0x06 (SHA3) or 0x1F (SHAKE)
      * @return The modified message with the added padding.
      */
-
     private static byte[] PADDING(byte[] theState, final int theDomainCode, final int MY_RATE) {
         byte[] temp;
 
@@ -188,6 +182,7 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
 
             //The number of complete chunks of size rate (byte)
             int startPos = theState.length - (theState.length % (MY_RATE / 8));
+            //The number of bytes remaining thats less than the rate (byte)
             int numOfRemainBytes = theState.length % (MY_RATE / 8);
 
             System.arraycopy(theState, startPos, temp, 0, numOfRemainBytes);
@@ -196,13 +191,14 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
             temp[numOfRemainBytes] = (byte) theDomainCode;
             temp[(MY_RATE / 8) - 1] |= (byte) 0x80;
 
-             // the length of the buffer will be the length of the state + the extra padding
+             // The length of the buffer will be the length of the state + the extra padding
+            // The buffer will combine the padded chunk plus the message.
             byte[] buffer = new byte[theState.length + (MY_RATE / 8)];
 
             //Adds content from theState to the buffer.
             System.arraycopy(theState, 0, buffer, 0, theState.length);
 
-            //Adds the remaining content from temp into the buffer
+            //Adds the padded content from temp into the buffer
             System.arraycopy(temp, 0, buffer, startPos,MY_RATE / 8);
 
             theState = buffer;
