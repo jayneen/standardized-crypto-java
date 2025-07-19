@@ -93,7 +93,8 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
 
     @Override
     public byte[] squeeze(int len) {
-        return squeeze(null, len);
+        byte[] out = new byte[len];
+        return squeeze(out, len);
     }
 
     @Override
