@@ -25,12 +25,10 @@ public class Main {
                 System.out.print("Please enter a security level for SHA-3 (224,256,384,512) " +
                         "> ");
                 int ShaSecLevel = input.nextInt();
-                input.nextLine();
 
                 System.out.print("\n\nPlease enter a security level for SHAKE (128,256) > ");
 
                 int ShakeSecLevel = input.nextInt();
-                input.nextLine();
 
                 System.out.print("Please enter the files path (Q to quit) > ");
 
@@ -40,7 +38,7 @@ public class Main {
                     break;
                 }
 
-                //Getting users passphrase and document path
+                // Getting users passphrase and document path
                 fileBinary = Files.readAllBytes(Paths.get(userInput));
                 fileSize(fileBinary);
                 System.out.println("Please enter a passphrase: ");
@@ -49,7 +47,7 @@ public class Main {
                 System.out.println("Total KiB read: " + (double) passBinary.length / 1025 +
                         "\n");
 
-                //outputting the sample document binary file.
+                // outputting the sample document binary file.
                 byte[] docSample = new byte[10];
                 System.arraycopy(fileBinary, 0, docSample, 0, docSample.length);
                 System.out.println("Previous file Hash: " + Arrays.toString(docSample));
@@ -65,10 +63,9 @@ public class Main {
                 System.out.println("Post Encrypted: " + Arrays.toString(docSample));
                 fileSize(encryptedFile);
 
-                //Creating a new file recursively
+                // Creating a new file recursively
                 File finalDocument = checkFile(new File("Encryptedfile.txt"));
                 Files.write(finalDocument.toPath(), encryptedFile, StandardOpenOption.APPEND);
-
 
             } catch (InvalidPathException | IOException invalidPathException) {
                 System.out.println("""
@@ -82,6 +79,7 @@ public class Main {
 
     /**
      * Gets the size of the file or passphrase for informational purposes.
+     * 
      * @param encryptedFile the file or passphrase in byte[]
      */
     private static void fileSize(byte[] encryptedFile) {
@@ -98,12 +96,13 @@ public class Main {
 
     /**
      * Recursively checks if the file already exists and creates a new file.
+     * 
      * @param theFile the file that will store the encrypted document
      * @return the newly generated file to be writen on.
      */
     private static File checkFile(File theFile) {
         try {
-            if(!theFile.createNewFile()) {
+            if (!theFile.createNewFile()) {
                 checkFile(theFile, 1);
             }
         } catch (final IOException ioException) {
@@ -115,6 +114,7 @@ public class Main {
 
     /**
      * Recursively checks if the file already exists and creates a new file.
+     * 
      * @param theFile the file that will store the encrypted document
      * @param counter the counter to copy new files with similar names
      * @return the newly generated file to be writen on.
@@ -132,17 +132,17 @@ public class Main {
         return theFile;
     }
 
-
     /**
      * XOR's the hashed passphrase and the hashed document to encrypt the document.
      *
-     * @param theHashedPassPhrase the user chosen passphrase *Hash length must equal to the
+     * @param theHashedPassPhrase the user chosen passphrase *Hash length must equal
+     *                            to the
      *                            document hash length!
      * @param theHashedDocument   the hashed users document from the provided path.
      * @return the users encrypted hashed document.
      */
     private static byte[] encryptFile(final byte[] theHashedPassPhrase,
-                                      final byte[] theHashedDocument) {
+            final byte[] theHashedDocument) {
 
         if (theHashedDocument.length != theHashedPassPhrase.length) {
             throw new InvalidParameterException("The hash for the passphrase and the hash " +
