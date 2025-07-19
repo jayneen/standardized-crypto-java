@@ -44,6 +44,7 @@ public class Main {
                 if (userInput.equalsIgnoreCase("q")) {
                     break;
                 }
+
                 //Getting users passphrase and document path
                 fileBinary = Files.readAllBytes(Paths.get(userInput));
                 fileSize(fileBinary);
