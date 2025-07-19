@@ -93,6 +93,7 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
     @Override
     public byte[] squeeze(byte[] out, int len)
     {
+        //By: Zane Swaims
         //I am not checking if absorb has been done or not, that may need to be added
         //I am just presuming it will always be checked to have been done.
 
