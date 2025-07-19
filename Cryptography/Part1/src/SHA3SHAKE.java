@@ -236,7 +236,4 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
         return out;
     }
 
-    public static void main(String[] args) {
-
-    }
 }
