@@ -25,10 +25,12 @@ public class Main {
                 System.out.print("Please enter a security level for SHA-3 (224,256,384,512) " +
                         "> ");
                 int ShaSecLevel = input.nextInt();
+                input.nextLine();
 
                 System.out.print("\n\nPlease enter a security level for SHAKE (128,256) > ");
 
                 int ShakeSecLevel = input.nextInt();
+                input.nextLine();
 
                 System.out.print("Please enter the files path (Q to quit) > ");
 
