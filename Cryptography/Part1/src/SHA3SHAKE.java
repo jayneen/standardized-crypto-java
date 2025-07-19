@@ -23,7 +23,11 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
      */
     private int MY_RATE;
 
-    public SHA3SHAKE() {}
+    private int SqueezeIterator;
+    
+    public SHA3SHAKE() {
+        SqueezeIterator = 0;
+    }
 
     @Override
     public void init(int suffix) {
