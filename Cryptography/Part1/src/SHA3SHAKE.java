@@ -87,8 +87,35 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
     }
 
     @Override
-    public byte[] squeeze(byte[] out, int len) {
-        return new byte[0];
+    public byte[] squeeze(byte[] out, int len)
+    {
+        //I am not checking if absorb has been done or not, that may need to be added
+        //I am just presuming it will always be checked to have been done.
+
+        int outIterator = 0;
+
+        //Here we loop through our
+        while(outIterator < len)
+        {
+            if (SqueezeIterator == MY_RATE)
+            {
+                //TODO: CALL KECCAK-PERMUTATION HERE
+                
+                SqueezeIterator = 0;
+            }
+
+            int chunk = Math.min(MY_RATE-SqueezeIterator, len-outIterator);
+
+            //This nifty loop is copying over stuff from our state to our output buffer
+            for (int i = 0; i < chunk; i++) {
+                out[outIterator + i] = MY_STATE[SqueezeIterator + i];
+            }
+
+            outIterator = chunk + outIterator;
+            SqueezeIterator = chunk + SqueezeIterator;
+        }
+
+        return out;
     }
 
     @Override
