@@ -12,12 +12,23 @@ import java.util.Scanner;
 public class Main {
 
     public static void main(String[] args) {
-          Scanner input;
+        Scanner input;
         while (true) {
+            String userInput = null;
+            String userOutput = null;
+            String passphrase = null;
+
+            if (args.length > 0)
+                userInput = args[0];
+            if (args.length > 1)
+                userOutput = args[1];
+            if (args.length > 2)
+                passphrase = args[2];
+
             byte[] fileBinary;
             byte[] passBinary;
 
-           input = new Scanner(System.in);
+            input = new Scanner(System.in);
             try {
                 System.out.println("\nSHA-3/SHAKE encryption");
 
@@ -29,22 +40,29 @@ public class Main {
 
                 int ShakeSecLevel = Integer.parseInt(input.nextLine());
 
-                System.out.print("Please enter the files path (Q to quit) > ");
+                if (userInput == null) {
+                    System.out.print("Please enter the files path (Q to quit) > ");
+                    userInput = input.nextLine().replace("\"", "");
 
-                String userInput = input.nextLine().replace("\"", "");
-                if (userInput.equalsIgnoreCase("q")) {
-                    break;
+                    if (userInput.equalsIgnoreCase("q")) {
+                        break;
+                    }
                 }
-                //Getting users passphrase and document path
+
+                // Getting users passphrase and document path
                 fileBinary = Files.readAllBytes(Paths.get(userInput));
                 fileSize(fileBinary);
-                System.out.println("Please enter a passphrase: ");
-                String passphrase = input.nextLine();
+
+                if (passphrase == null) {
+                    System.out.println("Please enter a passphrase: ");
+                    passphrase = input.nextLine();
+                }
+
                 passBinary = passphrase.getBytes(StandardCharsets.UTF_8);
                 System.out.println("Total KiB read: " + (double) passBinary.length / 1025 +
                         "\n");
 
-                //outputting the sample document binary file.
+                // outputting the sample document binary file.
                 byte[] docSample = new byte[10];
                 System.arraycopy(fileBinary, 0, docSample, 0, docSample.length);
                 System.out.println("Previous file Hash: " + Arrays.toString(docSample));
@@ -63,7 +81,7 @@ public class Main {
 
                 fileSize(encryptedFile);
 
-                //Creating a new file recursively
+                // Creating a new file recursively
                 File finalDocument = checkFile(new File("Encryptedfile.txt"));
                 Files.write(finalDocument.toPath(), encryptedFile, StandardOpenOption.APPEND);
 
@@ -143,7 +161,7 @@ public class Main {
      * @return the users encrypted hashed document.
      */
     private static byte[] encryptFile(final byte[] theHashedPassPhrase,
-                                      final byte[] theHashedDocument) {
+            final byte[] theHashedDocument) {
 
         if (theHashedDocument.length != theHashedPassPhrase.length) {
             throw new InvalidParameterException("The hash for the passphrase and the hash " +
