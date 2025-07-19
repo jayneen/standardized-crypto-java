@@ -14,6 +14,16 @@ public class Main {
     public static void main(String[] args) {
 
         while (true) {
+            String userInput = null;
+            String userOutput = null;
+            String passphrase = null;
+
+            if (args.length > 0)
+                userInput = args[0];
+            if (args.length > 1)
+                userOutput = args[1];
+            if (args.length > 2)
+                passphrase = args[2];
 
             byte[] fileBinary;
             byte[] passBinary;
@@ -25,24 +35,31 @@ public class Main {
                 System.out.print("Please enter a security level for SHA-3 (224,256,384,512) " +
                         "> ");
                 int ShaSecLevel = input.nextInt();
+                input.nextLine(); // consume the \n
 
                 System.out.print("\n\nPlease enter a security level for SHAKE (128,256) > ");
 
                 int ShakeSecLevel = input.nextInt();
+                input.nextLine(); // consume the \n
 
-                System.out.print("Please enter the files path (Q to quit) > ");
+                if (userInput == null) {
+                    System.out.print("Please enter the files path (Q to quit) > ");
+                    userInput = input.nextLine().replace("\"", "");
 
-                String userInput = input.nextLine().replace("\"", "");
-
-                if (userInput.equalsIgnoreCase("q")) {
-                    break;
+                    if (userInput.equalsIgnoreCase("q")) {
+                        break;
+                    }
                 }
 
                 // Getting users passphrase and document path
                 fileBinary = Files.readAllBytes(Paths.get(userInput));
                 fileSize(fileBinary);
-                System.out.println("Please enter a passphrase: ");
-                String passphrase = input.nextLine();
+
+                if (passphrase == null) {
+                    System.out.println("Please enter a passphrase: ");
+                    passphrase = input.nextLine();
+                }
+
                 passBinary = passphrase.getBytes(StandardCharsets.UTF_8);
                 System.out.println("Total KiB read: " + (double) passBinary.length / 1025 +
                         "\n");
