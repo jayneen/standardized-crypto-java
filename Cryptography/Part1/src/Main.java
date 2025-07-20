@@ -146,7 +146,7 @@ public class Main {
      * @return the newly generated file to be writen on.
      */
     private static File checkFile(File theFile, int counter) {
-        File tempFile = theFile;
+
         try {
             if (!theFile.createNewFile()) {
                 theFile = new File("EncryptedFile-" + counter + ".txt");
@@ -156,7 +156,7 @@ public class Main {
         } catch (IOException ioException) {
             System.out.println("Unable to create new file!");
         }
-        return tempFile;
+        return theFile;
     }
 
     /**
