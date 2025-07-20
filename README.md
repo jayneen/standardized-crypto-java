@@ -3,12 +3,12 @@
 A Java implementation of 128-bit symmetric encryption application using algorithms inspired by ECDHIES encryption, Schnorr signatures, SHA-3 hash, and SHAKE functions. 
 
 ## Contributors:
-Kassie Whitney
-Zane Swaims
-Evgeniia Nemynova
+- Kassie Whitney
+- Zane Swaims
+- Evgeniia Nemynova
 
 ## Instructions:
-## How to Run:
+### How to Run:
 1) Compile code with: javac Main.java
 2) Run with: java Main
 ### Command Line Arguments:
