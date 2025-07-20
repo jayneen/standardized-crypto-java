@@ -13,15 +13,19 @@ public class Main {
 
     public static void main(String[] args) {
         Scanner input;
+
         while (true) {
+
             String userInput = null; // file to read from
             String userOutput = null; // file to write to (creates or overwrites)
             String passphrase = null;
 
             if (args.length > 0)
                 userInput = args[0];
+
             if (args.length > 1)
                 userOutput = args[1];
+
             if (args.length > 2)
                 passphrase = args[2];
 
@@ -29,16 +33,17 @@ public class Main {
             byte[] passBinary;
 
             input = new Scanner(System.in);
+
             try {
                 System.out.println("\nSHA-3/SHAKE encryption");
 
                 System.out.print("Please enter a security level for SHA-3 (224,256,384,512) " +
                         "> ");
-                int ShaSecLevel = Integer.parseInt(input.nextLine());
+                final int ShaSecLevel = Integer.parseInt(input.nextLine());
 
                 System.out.print("\n\nPlease enter a security level for SHAKE (128,256) > ");
 
-                int ShakeSecLevel = Integer.parseInt(input.nextLine());
+                final int ShakeSecLevel = Integer.parseInt(input.nextLine());
 
                 if (userInput == null) {
                     System.out.print("Please enter the files path (Q to quit) > ");
@@ -64,7 +69,7 @@ public class Main {
                         "\n");
 
                 // outputting the sample document binary file.
-                byte[] docSample = new byte[10];
+                final byte[] docSample = new byte[10];
                 System.arraycopy(fileBinary, 0, docSample, 0, docSample.length);
                 System.out.println("Previous file Hash: " + Arrays.toString(docSample));
 
@@ -74,7 +79,7 @@ public class Main {
                 fileBinary = SHA3SHAKE.SHA3(ShaSecLevel, fileBinary, null);
 
                 // Outputting sample size Hashed document
-                byte[] encryptedFile = encryptFile(passBinary, fileBinary);
+                final byte[] encryptedFile = encryptFile(passBinary, fileBinary);
 
                 System.arraycopy(encryptedFile, 0, docSample, 0, docSample.length);
 
@@ -83,19 +88,21 @@ public class Main {
                 fileSize(encryptedFile);
 
                 if (userOutput == null) {
-                    // Creating a new file recursively
-                    File finalDocument = checkFile(new File("EncryptedFile.txt"));
 
-                     //TODO: fix the encryptedFile so that its a string in HEXADECIMAL format
-                    //  before writing it to the file.
-                    Files.write(finalDocument.toPath(), encryptedFile, StandardOpenOption.APPEND);
+                    // Creating a new file recursively
+                    final File finalDocument = checkFile(new File("EncryptedFile.txt"));
+                    convertToHexAndWrite(finalDocument, encryptedFile);
+
                 } else {
+
                     // if the name is provided through command line arguments, create and overwrite it
-                    File finalDocument = new File(userOutput);
+                    final File finalDocument = new File(userOutput);
                     Files.write(finalDocument.toPath(), encryptedFile, StandardOpenOption.CREATE);
+
                 }
 
             } catch (InvalidPathException | IOException invalidPathException) {
+
                 System.out.println("""
                         This is an invalid file path or the file is unable to convert to binary!
                         Please try again!
@@ -111,13 +118,17 @@ public class Main {
      * @param encryptedFile the file or passphrase in byte[]
      */
     private static void fileSize(byte[] encryptedFile) {
+
         if (encryptedFile.length < 1024) {
+
             System.out.println("Total Bytes read: " + (double) encryptedFile.length);
 
         } else if (1025 <= encryptedFile.length && encryptedFile.length < 1_048_576) {
+
             System.out.println("Total KiB read: " + (double) encryptedFile.length / 1025);
 
         } else if (1_048_576 <= encryptedFile.length) {
+
             System.out.println("Total MiB read: " + (double) encryptedFile.length / 1_048_576);
         }
     }
@@ -128,12 +139,17 @@ public class Main {
      * @param theFile the file that will store the encrypted document
      * @return the newly generated file to be writen on.
      */
-    private static File checkFile(File theFile) {
+    public static File checkFile(File theFile) {
+
         try {
+
             if (!theFile.createNewFile()) {
+
                 return checkFile(theFile, 1);
             }
+
         } catch (final IOException ioException) {
+
             System.out.println("Unable to create new file!");
         }
 
@@ -150,14 +166,21 @@ public class Main {
     private static File checkFile(File theFile, int counter) {
 
         try {
+
             if (!theFile.createNewFile()) {
+
                 theFile = new File("EncryptedFile-" + counter + ".txt");
+
                 counter++;
+
                 return checkFile(theFile, counter);
             }
         } catch (IOException ioException) {
+
             System.out.println("Unable to create new file!");
+
         }
+
         return theFile;
     }
 
@@ -171,16 +194,15 @@ public class Main {
      * @return the users encrypted hashed document.
      */
     private static byte[] encryptFile(final byte[] theHashedPassPhrase,
-            final byte[] theHashedDocument) {
-
-        System.out.println("The Hashed Document: "+theHashedDocument.length);
-        System.out.println("The Hashed Passphrase: "+theHashedPassPhrase.length );
+                                      final byte[] theHashedDocument) {
 
         if (theHashedDocument.length != theHashedPassPhrase.length) {
             throw new InvalidParameterException("The hash for the passphrase and the hash " +
                     "for the document must be the same size!");
         }
-        byte[] encryptedMessage = new byte[theHashedDocument.length];
+
+        final byte[] encryptedMessage = new byte[theHashedDocument.length];
+
         for (int i = 0; i < theHashedDocument.length; i++) {
 
             encryptedMessage[i] = (byte) (theHashedPassPhrase[i] ^ theHashedDocument[i]);
@@ -188,4 +210,31 @@ public class Main {
 
         return encryptedMessage;
     }
+
+    public static void convertToHexAndWrite(final File theFile,
+                                            final byte[] theEncryptedFile) {
+        final StringBuilder sb = new StringBuilder(theEncryptedFile.length * 2);
+
+        for (byte theFileByte : theEncryptedFile) {
+            sb.append(String.format("%02x", theFileByte));
+        }
+
+        String rawHex = sb.toString();
+
+// Format with a space every 8 characters
+        StringBuilder formattedHex = new StringBuilder();
+        for (int i = 0; i < rawHex.length(); i++) {
+            formattedHex.append(rawHex.charAt(i));
+            if ((i + 1) % 8 == 0 && i + 1 < rawHex.length()) {
+                formattedHex.append(' ');
+            }
+        }
+
+        try {
+            Files.writeString(theFile.toPath(), formattedHex.toString() + "\n", StandardOpenOption.APPEND);
+        } catch (final IOException ioe) {
+            System.out.println("Invalid File Path!");
+        }
+    }
+
 }
