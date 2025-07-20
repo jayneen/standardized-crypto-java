@@ -104,12 +104,11 @@ class KECCAK_F {
         for(int t = 0; t < 24; t++)
         {
             int offset = ((t + 1) * (t + 2 )) / 2;
-            int offsetModed = offset % laneLength;
 
             //complicated shit
             for(int z = 0; z < laneLength; z++)
             {
-                int index = (z - offsetModed) % laneLength;
+                int index = (z + offset) % laneLength;
 
                 myStateStar[x][y][z] = MY_STATE[x][y][index];
             }
@@ -127,7 +126,7 @@ class KECCAK_F {
             for(int j = 0; j < 5; j++)
             {
                 for (int z = 0; z < laneLength; z++) {
-                    MY_STATE[i][j][z] = myStateStar[i][j][z];
+                    MY_STATE[0][0][z] = myStateStar[i][j][z];
                 }
             }
         }
