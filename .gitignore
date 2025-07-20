@@ -32,3 +32,6 @@ replay_pid*
 
 # VSCode settings
 .vscode/
+
+# the out folder
+/out/
