@@ -2,7 +2,7 @@
 class KECCAK_F {
 
 
-    private static final int[][][] MY_STATE = new int[5][5][64];
+    private static int[][][] MY_STATE = new int[5][5][64];
 
     KECCAK_F() {
     }
@@ -23,12 +23,12 @@ class KECCAK_F {
             }
         }
 
-        for (int k = 0; k < 24; k++) {
+        for (int i = 0; i < 24; i++) {
             theta();
             rho();
             pi();
             chi();
-            iota(k);
+            iota(i);
         }
 
         return flattenState();
@@ -92,7 +92,14 @@ class KECCAK_F {
      * ShiftRows transform
      */
     private static void pi() {
+        int[][][] buffer = new int[5][5][64];
+        for(int x = 0; x < 5; x++) {
+            for(int y = 0; y < 5; y++) {
+                System.arraycopy(MY_STATE[(x + 3 * y) % 5][x], 0, buffer[x][y], 0, 64);
+            }
+        }
 
+        MY_STATE = buffer;
     }
 
 
@@ -100,7 +107,13 @@ class KECCAK_F {
      * SubBytes transform (bit left rotation with added nand gate)
      */
     private static void chi() {
-
+        for(int x = 0; x < 5; x++) {
+            for (int y = 0; y < 5; y++) {
+                for(int z = 0; z < 64; z++) {
+                    MY_STATE[x][y][z] ^= ((MY_STATE[(x+1)%5][y][z] ^ 1) * MY_STATE[(x+2)%5][y][z]);
+                }
+            }
+        }
     }
 
     /**
