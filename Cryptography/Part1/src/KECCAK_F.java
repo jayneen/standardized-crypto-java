@@ -40,8 +40,8 @@ class KECCAK_F {
     private static void theta() {
         int laneLength = MY_STATE[0][0].length;
 
-        byte[][] C = new byte[5][laneLength];
-        byte[][] D = new byte[5][laneLength];
+        int[][] C = new int[5][laneLength];
+        int[][] D = new int[5][laneLength];
 
         //filling c with 0
         for (int x = 0; x < 5; x++) {
@@ -55,7 +55,7 @@ class KECCAK_F {
         for (int x = 0; x < 5; x++) {
             for (int y = 0; y < 5; y++) {
                 for (int z = 0; z < laneLength; z++) {
-                    C[x][z] ^= (byte) MY_STATE[x][y][z];
+                    C[x][z] ^= MY_STATE[x][y][z];
                 }
             }
         }
@@ -66,7 +66,7 @@ class KECCAK_F {
             for (int z = 0; z < laneLength; z++) {
                 //(x+4)%5 equivalent (x-1)%5 and covers the wrap around
                 //adding the laneLength to z at the end helps cover negative values as well
-                D[x][z] = (byte) (C[(x + 4) % 5][z] ^ C[(x + 1) % 5][(z + laneLength - 1) % laneLength]);
+                D[x][z] = (C[(x + 4) % 5][z] ^ C[(x + 1) % 5][(z + laneLength - 1) % laneLength]);
             }
         }
 
@@ -84,8 +84,52 @@ class KECCAK_F {
     /**
      * ShiftRows transform (Down columns' lane)
      */
-    private static void rho() {
+    private static void rho()
+    {
+        int laneLength = MY_STATE[0][0].length;
+        int[][][] myStateStar = new int[5][5][laneLength];
 
+        //For all z such that 0≤z<w, let A′ [0, 0,z] = A[0, 0,z]
+        for (int z = 0; z < laneLength; z++) {
+            myStateStar[0][0][z] = MY_STATE[0][0][z];
+        }
+
+        //Let (x, y) = (1, 0).
+        int x = 1;
+        int y = 0;
+
+        //3. For t from 0 to 23:
+        //a. for all z such that 0≤z<w, let A′[x, y,z] = A[x, y, (z–(t+1)(t+2)/2) mod w];
+        //b. let (x, y) = (y, (2x+3y) mod 5).
+        for(int t = 0; t < 24; t++)
+        {
+            int offset = ((t + 1) * (t + 2 )) / 2;
+
+            //complicated shit
+            for(int z = 0; z < laneLength; z++)
+            {
+                int index = (z + offset) % laneLength;
+
+                myStateStar[x][y][z] = MY_STATE[x][y][index];
+            }
+
+            int newX = y;
+            int newY = (2 * x + 3 * y) % 5;
+            x = newX;
+            y = newY;
+        }
+
+        //4. Return A′
+        //I'm upset at having to use i and j instead of x and y but those are being used already
+        for(int i = 0; i < 5; i++)
+        {
+            for(int j = 0; j < 5; j++)
+            {
+                for (int z = 0; z < laneLength; z++) {
+                    MY_STATE[0][0][z] = myStateStar[0][0][z];
+                }
+            }
+        }
     }
 
     /**
