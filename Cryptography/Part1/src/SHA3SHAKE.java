@@ -119,7 +119,7 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
 
     @Override
     public byte[] squeeze(int len) {
-        byte[] out = new byte[len / 8];
+        byte[] out = new byte[len];
         return squeeze(out, len);
     }
 
@@ -149,7 +149,7 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
     public static byte[] SHA3(int theSuffix, byte[] theState, byte[] out) {
 
         if (theSuffix != 224 && theSuffix != 256 && theSuffix != 384 && theSuffix != 512) {
-            throw new InvalidParameterException("Invalid suffix!");
+            throw new IllegalArgumentException("Invalid suffix!");
         }
         SHA3SHAKE sha3SHAKE = new SHA3SHAKE();
         sha3SHAKE.init(theSuffix);
@@ -173,8 +173,9 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
     static byte[] SHAKE(int theSuffix, byte[] theState, int len, byte[] out) {
 
         if (theSuffix != 128 && theSuffix != 256) {
-            throw new InvalidParameterException("Invalid suffix!");
+            throw new IllegalArgumentException("Invalid suffix!");
         }
+
         SHA3SHAKE sha3SHAKE = new SHA3SHAKE();
         sha3SHAKE.init(theSuffix);
         theState = PADDING(theState, 0x1F, sha3SHAKE.MY_RATE);
@@ -193,7 +194,7 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
     private static byte[] PADDING(byte[] theState, final int theDomainCode, final int MY_RATE) {
         byte[] temp;
 
-        if (theState.length <= MY_RATE / 8) {
+        if (theState.length < MY_RATE / 8) {
             temp = new byte[200];
             System.arraycopy(theState, 0, temp, 0, theState.length);
 
