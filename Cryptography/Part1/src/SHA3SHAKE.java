@@ -270,4 +270,24 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
         return out;
     }
 
+    //TODO: TESTING MAIN
+//    public static void main(String[] args) {
+//        // Example string to hash
+//        String message = "abc";
+//
+//        // Convert to bytes
+//        byte[] input = message.getBytes(StandardCharsets.UTF_8);
+//
+//        // Call the static SHA3 method with 256-bit suffix
+//        byte[] hash = SHA3(256, input, null);  // SHA3-256
+//
+//        // Print the result in hex
+//        System.out.println("SHA3-256 hash:");
+//        for (byte b : hash) {
+//            System.out.printf("%02x", b);
+//        }
+//        System.out.println();
+//    }
+
+
 }

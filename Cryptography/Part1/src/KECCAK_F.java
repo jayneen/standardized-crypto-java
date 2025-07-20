@@ -4,14 +4,23 @@ class KECCAK_F {
 
     private static int[][][] MY_STATE = new int[5][5][64];
 
+    //hard coding the deterministic nature of rho
+    private static final int[][] RHO_OFFSETS = {
+            {  0,  36,   3, 105, 210 },
+            {  1,  44,  10,  45,  66 },
+            { 62,   6,  43,  15, 253 },
+            { 28,  55,  25,  21, 120 },
+            { 91, 276, 136,  78,  63 }
+    };
+
     KECCAK_F() {
     }
 
 
     public static byte[] permutate(final byte[] theState) {
 
-        for (int y = 0; y < 5; y++) {
-            for (int x = 0; x < 5; x++) {
+       for (int y = 0; y < 5; y++) {
+           for (int x = 0; x < 5; x++) {
                 int laneIndex = 8 * (5 * y + x); // starting byte index for lane (x, y)
                 for (int byteOffset = 0; byteOffset < 8; byteOffset++) {
                     byte laneByte = theState[laneIndex + byteOffset];
@@ -22,6 +31,18 @@ class KECCAK_F {
                 }
             }
         }
+//TODO: LOGIC SUGGESTED BY CHATGPT
+//        for (int y = 0; y < 5; y++) {
+//            for (int x = 0; x < 5; x++) {
+//                int laneStart = 8 * (5 * y + x); // Correct byte offset
+//                for (int z = 0; z < 64; z++) {
+//                    int byteIndex = laneStart + (z / 8);
+//                    int bitIndex = z % 8;
+//                    int bit = (theState[byteIndex] >>> bitIndex) & 1;
+//                    MY_STATE[x][y][z] = bit;
+//                }
+//            }
+//        }
 
         for (int i = 0; i < 24; i++) {
             theta();
@@ -84,54 +105,71 @@ class KECCAK_F {
     /**
      * ShiftRows transform (Down columns' lane)
      */
-    private static void rho()
-    {
-        int laneLength = MY_STATE[0][0].length;
-        int[][][] myStateStar = new int[5][5][laneLength];
+//    private static void rho()
+//    {
+//        int laneLength = MY_STATE[0][0].length;
+//        int[][][] myStateStar = new int[5][5][laneLength];
+//
+//        //For all z such that 0≤z<w, let A′ [0, 0,z] = A[0, 0,z]
+//        for (int z = 0; z < laneLength; z++) {
+//            myStateStar[0][0][z] = MY_STATE[0][0][z];
+//        }
+//
+//        //Let (x, y) = (1, 0).
+//        int x = 1;
+//        int y = 0;
+//
+//        //3. For t from 0 to 23:
+//        //a. for all z such that 0≤z<w, let A′[x, y,z] = A[x, y, (z–(t+1)(t+2)/2) mod w];
+//        //b. let (x, y) = (y, (2x+3y) mod 5).
+//        for(int t = 0; t < 24; t++)
+//        {
+//            int offset = ((t + 1) * (t + 2 )) / 2;
+//            int offsetModed = offset % laneLength;
+//
+//            //complicated shit
+//            for(int z = 0; z < laneLength; z++)
+//            {
+//                //to help prevent out of bounds i am just moding a bunch, trust it makes sense
+//                int index = ((z - offsetModed) % laneLength + laneLength) % laneLength;
+//
+//                myStateStar[x][y][z] = MY_STATE[x][y][index];
+//            }
+//
+//            int newX = y;
+//            int newY = (2 * x + 3 * y) % 5;
+//            x = newX;
+//            y = newY;
+//        }
+//
+//        //4. Return A′
+//        //I'm upset at having to use i and j instead of x and y but those are being used already
+//        for(int i = 0; i < 5; i++)
+//        {
+//            for(int j = 0; j < 5; j++)
+//            {
+//                for (int z = 0; z < laneLength; z++) {
+//                    MY_STATE[i][j][z] = myStateStar[i][j][z];
+//                }
+//            }
+//        }
+//    }
 
-        //For all z such that 0≤z<w, let A′ [0, 0,z] = A[0, 0,z]
-        for (int z = 0; z < laneLength; z++) {
-            myStateStar[0][0][z] = MY_STATE[0][0][z];
-        }
+    //TODO: NEW LOGIC SUGGESTED BY CHAT GPT
+    private static void rho() {
+        int[][][] newState = new int[5][5][64];
 
-        //Let (x, y) = (1, 0).
-        int x = 1;
-        int y = 0;
+        for (int x = 0; x < 5; x++) {
+            for (int y = 0; y < 5; y++) {
+                int offset = RHO_OFFSETS[x][y];
 
-        //3. For t from 0 to 23:
-        //a. for all z such that 0≤z<w, let A′[x, y,z] = A[x, y, (z–(t+1)(t+2)/2) mod w];
-        //b. let (x, y) = (y, (2x+3y) mod 5).
-        for(int t = 0; t < 24; t++)
-        {
-            int offset = ((t + 1) * (t + 2 )) / 2;
-            int offsetModed = offset % laneLength;
-
-            //complicated shit
-            for(int z = 0; z < laneLength; z++)
-            {
-                //to help prevent out of bounds i am just moding a bunch, trust it makes sense
-                int index = ((z - offsetModed) % laneLength + laneLength) % laneLength;
-
-                myStateStar[x][y][z] = MY_STATE[x][y][index];
-            }
-
-            int newX = y;
-            int newY = (2 * x + 3 * y) % 5;
-            x = newX;
-            y = newY;
-        }
-
-        //4. Return A′
-        //I'm upset at having to use i and j instead of x and y but those are being used already
-        for(int i = 0; i < 5; i++)
-        {
-            for(int j = 0; j < 5; j++)
-            {
-                for (int z = 0; z < laneLength; z++) {
-                    MY_STATE[i][j][z] = myStateStar[i][j][z];
+                for (int z = 0; z < 64; z++) {
+                    newState[x][y][z] = MY_STATE[x][y][(z + offset) % 64];
                 }
             }
         }
+
+        MY_STATE = newState;
     }
 
     /**
@@ -147,6 +185,19 @@ class KECCAK_F {
 
         MY_STATE = buffer;
     }
+
+    //TODO: THIS SHOULD WORK ACCORDING TO CHAT GPT
+//    private static void pi() {
+//        int[][][] buffer = new int[5][5][64];
+//        for (int x = 0; x < 5; x++) {
+//            for (int y = 0; y < 5; y++) {
+//                for (int z = 0; z < 64; z++) {
+//                    buffer[y][(2 * x + 3 * y) % 5][z] = MY_STATE[x][y][z];
+//                }
+//            }
+//        }
+//        MY_STATE = buffer;
+//    }
 
 
     /**
@@ -204,5 +255,24 @@ class KECCAK_F {
 
         return flatState;
     }
+
+    //TODO: THIS SHOULD WORK ACCORDING TO CHAT GPT
+//    private static byte[] flattenState() {
+//        byte[] flatState = new byte[200];
+//
+//        for (int y = 0; y < 5; y++) {
+//            for (int x = 0; x < 5; x++) {
+//                for (int b = 0; b < 8; b++) {
+//                    byte value = 0;
+//                    for (int bit = 0; bit < 8; bit++) {
+//                        value |= (MY_STATE[x][y][b * 8 + bit] & 1) << bit;
+//                    }
+//                    flatState[8 * (5 * y + x) + b] = (byte) value;
+//                }
+//            }
+//        }
+//
+//        return flatState;
+//    }
 
 }
