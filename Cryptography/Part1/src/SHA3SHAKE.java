@@ -96,14 +96,14 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
 
         //Here we loop through our
         while (outIterator < len) {
-            if (SqueezeIterator == MY_RATE) {
+            if (SqueezeIterator == MY_RATE / 8) {
 
                 MY_STATE = KECCAK_F.permutate(MY_STATE);
 
                 SqueezeIterator = 0;
             }
 
-            int chunk = Math.min(MY_RATE - SqueezeIterator, len - outIterator);
+            int chunk = Math.min(MY_RATE / 8 - SqueezeIterator, len - outIterator);
 
             //This nifty loop is copying over stuff from our state to our output buffer
             if (chunk >= 0) {
@@ -256,10 +256,10 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
         sha3SHAKE.absorb(theState);
 
         if (out == null) {
-            out = sha3SHAKE.squeeze(len);
+            out = sha3SHAKE.squeeze(len/8);
 
         } else {
-            sha3SHAKE.squeeze(out, len);
+            sha3SHAKE.squeeze(out, len/8);
 
         }
 

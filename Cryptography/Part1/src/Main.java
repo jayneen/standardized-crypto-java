@@ -45,6 +45,7 @@ public class Main {
                     userInput = input.nextLine().replace("\"", "");
 
                     if (userInput.equalsIgnoreCase("q")) {
+                        input.close();
                         break;
                     }
                 }
@@ -68,7 +69,7 @@ public class Main {
                 System.out.println("Previous file Hash: " + Arrays.toString(docSample));
 
                 // calling SHA3/SHAKE
-                passBinary = SHA3SHAKE.SHAKE(ShakeSecLevel, passBinary, fileBinary.length,
+                passBinary = SHA3SHAKE.SHAKE(ShakeSecLevel, passBinary, ShaSecLevel,
                         null);
                 fileBinary = SHA3SHAKE.SHA3(ShaSecLevel, fileBinary, null);
 
@@ -84,6 +85,9 @@ public class Main {
                 if (userOutput == null) {
                     // Creating a new file recursively
                     File finalDocument = checkFile(new File("EncryptedFile.txt"));
+
+                     //TODO: fix the encryptedFile so that its a string in HEXADECIMAL format
+                    //  before writing it to the file.
                     Files.write(finalDocument.toPath(), encryptedFile, StandardOpenOption.APPEND);
                 } else {
                     // if the name is provided through command line arguments, create and overwrite it
@@ -97,8 +101,6 @@ public class Main {
                         Please try again!
                         """);
 
-            } finally {
-                input.close();
             }
         }
     }
@@ -170,6 +172,9 @@ public class Main {
      */
     private static byte[] encryptFile(final byte[] theHashedPassPhrase,
             final byte[] theHashedDocument) {
+
+        System.out.println("The Hashed Document: "+theHashedDocument.length);
+        System.out.println("The Hashed Passphrase: "+theHashedPassPhrase.length );
 
         if (theHashedDocument.length != theHashedPassPhrase.length) {
             throw new InvalidParameterException("The hash for the passphrase and the hash " +
