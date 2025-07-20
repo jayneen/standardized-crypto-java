@@ -109,7 +109,8 @@ class KECCAK_F {
             //complicated shit
             for(int z = 0; z < laneLength; z++)
             {
-                int index = (z - offsetModed) % laneLength;
+                //to help prevent out of bounds i am just moding a bunch, trust it makes sense
+                int index = ((z - offsetModed) % laneLength + laneLength) % laneLength;
 
                 myStateStar[x][y][z] = MY_STATE[x][y][index];
             }
