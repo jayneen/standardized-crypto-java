@@ -14,8 +14,8 @@ public class Main {
     public static void main(String[] args) {
         Scanner input;
         while (true) {
-            String userInput = null;
-            String userOutput = null;
+            String userInput = null; // file to read from
+            String userOutput = null; // file to write to (creates or overwrites)
             String passphrase = null;
 
             if (args.length > 0)
@@ -81,9 +81,15 @@ public class Main {
 
                 fileSize(encryptedFile);
 
-                // Creating a new file recursively
-                File finalDocument = checkFile(new File("Encryptedfile.txt"));
-                Files.write(finalDocument.toPath(), encryptedFile, StandardOpenOption.APPEND);
+                if (userOutput == null) {
+                    // Creating a new file recursively
+                    File finalDocument = checkFile(new File("EncryptedFile.txt"));
+                    Files.write(finalDocument.toPath(), encryptedFile, StandardOpenOption.APPEND);
+                } else {
+                    // if the name is provided through command line arguments, create and overwrite it
+                    File finalDocument = new File(userOutput);
+                    Files.write(finalDocument.toPath(), encryptedFile, StandardOpenOption.CREATE);
+                }
 
             } catch (InvalidPathException | IOException invalidPathException) {
                 System.out.println("""
@@ -91,12 +97,14 @@ public class Main {
                         Please try again!
                         """);
 
+            } finally {
+                input.close();
             }
         }
     }
 
     /**
-     * Gets the size of the file or passphrase for informational purposes.
+     * Prints the size of the file or passphrase for informational purposes.
      *
      * @param encryptedFile the file or passphrase in byte[]
      */
