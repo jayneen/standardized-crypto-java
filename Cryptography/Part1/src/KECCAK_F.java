@@ -90,9 +90,7 @@ class KECCAK_F {
         int[][][] myStateStar = new int[5][5][laneLength];
 
         //For all z such that 0≤z<w, let A′ [0, 0,z] = A[0, 0,z]
-        for (int z = 0; z < laneLength; z++) {
-            myStateStar[0][0][z] = MY_STATE[0][0][z];
-        }
+        System.arraycopy(MY_STATE[0][0], 0, myStateStar[0][0], 0, laneLength);
 
         //Let (x, y) = (1, 0).
         int x = 1;
@@ -125,9 +123,7 @@ class KECCAK_F {
         {
             for(int j = 0; j < 5; j++)
             {
-                for (int z = 0; z < laneLength; z++) {
-                    MY_STATE[0][0][z] = myStateStar[0][0][z];
-                }
+                System.arraycopy(myStateStar[i][j], 0, MY_STATE[i][j], 0, laneLength);
             }
         }
     }

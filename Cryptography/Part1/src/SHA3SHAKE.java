@@ -1,4 +1,7 @@
+import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.security.InvalidParameterException;
+import java.util.Arrays;
 
 /**
  * Assignment 1
@@ -256,14 +259,15 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
         sha3SHAKE.absorb(theState);
 
         if (out == null) {
-            out = sha3SHAKE.squeeze(len/8);
+            out = sha3SHAKE.squeeze(len / 8);
 
         } else {
-            sha3SHAKE.squeeze(out, len/8);
+            sha3SHAKE.squeeze(out, len / 8);
 
         }
 
 
         return out;
     }
+
 }
