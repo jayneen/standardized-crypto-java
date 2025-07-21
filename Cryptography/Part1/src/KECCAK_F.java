@@ -172,6 +172,27 @@ class KECCAK_F {
         MY_STATE = newState;
     }
 
+    //TODO: FIDDLE WITH THIS
+    //pulled from https://github.com/aelstad/keccakj/blob/master/src/main/java/com/github/aelstad/keccakj/core/Keccak1600.java
+    /*
+    final static int index(int x, int y)
+	{
+		return (((x)%5)+5*((y)%5));
+	}
+
+	final static long rol64(long l, int offset) {
+		return Long.rotateLeft(l, offset);
+	}
+
+    final void rho()
+	{
+	    int x, y;
+
+	    for(x=0; x<5; x++) for(y=0; y<5; y++)
+	        state[index(x, y)] = rol64(state[index(x, y)], KeccakRhoOffsets[index(x, y)]);
+	}
+     */
+
     /**
      * ShiftRows transform
      */
