@@ -260,6 +260,7 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
         for (int i = 0; i < theState.length; i++) {
             System.out.printf("%02x ", theState[i]);
         }
+        System.out.print("\n");
         sha3SHAKE.absorb(theState);
 
         if (out == null) {

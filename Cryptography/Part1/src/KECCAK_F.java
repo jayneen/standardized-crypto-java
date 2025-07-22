@@ -31,18 +31,6 @@ class KECCAK_F {
                 }
             }
         }
-//TODO: LOGIC SUGGESTED BY CHATGPT
-//        for (int y = 0; y < 5; y++) {
-//            for (int x = 0; x < 5; x++) {
-//                int laneStart = 8 * (5 * y + x); // Correct byte offset
-//                for (int z = 0; z < 64; z++) {
-//                    int byteIndex = laneStart + (z / 8);
-//                    int bitIndex = z % 8;
-//                    int bit = (theState[byteIndex] >>> bitIndex) & 1;
-//                    MY_STATE[x][y][z] = bit;
-//                }
-//            }
-//        }
 
         for (int i = 0; i < 24; i++) {
             theta();
@@ -155,44 +143,22 @@ class KECCAK_F {
 //        }
 //    }
 
-//    //TODO: NEW LOGIC SUGGESTED BY CHAT GPT
-//    private static void rho() {
-//        int[][][] newState = new int[5][5][64];
-//
-//        for (int x = 0; x < 5; x++) {
-//            for (int y = 0; y < 5; y++) {
-//                int offset = RHO_OFFSETS[x][y];
-//
-//                for (int z = 0; z < 64; z++) {
-//                    newState[x][y][z] = MY_STATE[x][y][(z + offset) % 64];
-//                }
-//            }
-//        }
-//
-//        MY_STATE = newState;
-//    }
-
     private static void rho() {
+        int[][][] newState = new int[5][5][64];
+
         for (int x = 0; x < 5; x++) {
             for (int y = 0; y < 5; y++) {
                 int offset = RHO_OFFSETS[x][y];
 
-                // Step 1: Pack the 64 bits into a long
-                long lane = 0L;
                 for (int z = 0; z < 64; z++) {
-                    lane |= ((long) MY_STATE[x][y][z] & 1L) << z;
-                }
-
-                // Step 2: Rotate
-                long rotatedLane = Long.rotateLeft(lane, offset);
-
-                // Step 3: Unpack the long back into 64 bits
-                for (int z = 0; z < 64; z++) {
-                    MY_STATE[x][y][z] = (int) ((rotatedLane >>> z) & 1L);
+                    newState[x][y][z] = MY_STATE[x][y][(z + offset) % 64];
                 }
             }
         }
+
+        MY_STATE = newState;
     }
+
 
     //TODO: FIDDLE WITH THIS
     //pulled from https://github.com/aelstad/keccakj/blob/master/src/main/java/com/github/aelstad/keccakj/core/Keccak1600.java
@@ -218,29 +184,18 @@ class KECCAK_F {
     /**
      * ShiftRows transform
      */
-//    private static void pi() {
-//        int[][][] buffer = new int[5][5][64];
-//        for(int x = 0; x < 5; x++) {
-//            for(int y = 0; y < 5; y++) {
-//                System.arraycopy(MY_STATE[(x + 3 * y) % 5][x], 0, buffer[x][y], 0, 64);
-//            }
-//        }
-//
-//        MY_STATE = buffer;
-//    }
-
-    //TODO: THIS SHOULD WORK ACCORDING TO CHAT GPT
     private static void pi() {
         int[][][] buffer = new int[5][5][64];
-        for (int x = 0; x < 5; x++) {
-            for (int y = 0; y < 5; y++) {
-                for (int z = 0; z < 64; z++) {
-                    buffer[y][(2 * x + 3 * y) % 5][z] = MY_STATE[x][y][z];
-                }
+        for(int x = 0; x < 5; x++) {
+            for(int y = 0; y < 5; y++) {
+                System.arraycopy(MY_STATE[(x + 3 * y) % 5][x], 0, buffer[x][y], 0, 64);
             }
         }
+
         MY_STATE = buffer;
     }
+
+
 
 
 
@@ -281,6 +236,7 @@ class KECCAK_F {
 
         for (int y = 0; y < 5; y++) {
             for (int x = 0; x < 5; x++) {
+
                 int laneStartIndex = 8 * (5 * y + x); // start index for lane (x, y)
 
                 for (int byteOffset = 0; byteOffset < 8; byteOffset++) {
@@ -300,23 +256,6 @@ class KECCAK_F {
         return flatState;
     }
 
-    //TODO: THIS SHOULD WORK ACCORDING TO CHAT GPT
-//    private static byte[] flattenState() {
-//        byte[] flatState = new byte[200];
-//
-//        for (int y = 0; y < 5; y++) {
-//            for (int x = 0; x < 5; x++) {
-//                for (int b = 0; b < 8; b++) {
-//                    byte value = 0;
-//                    for (int bit = 0; bit < 8; bit++) {
-//                        value |= (MY_STATE[x][y][b * 8 + bit] & 1) << bit;
-//                    }
-//                    flatState[8 * (5 * y + x) + b] = (byte) value;
-//                }
-//            }
-//        }
-//
-//        return flatState;
-//    }
+
 
 }
