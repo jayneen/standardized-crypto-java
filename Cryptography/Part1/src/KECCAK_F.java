@@ -155,21 +155,43 @@ class KECCAK_F {
 //        }
 //    }
 
-    //TODO: NEW LOGIC SUGGESTED BY CHAT GPT
-    private static void rho() {
-        int[][][] newState = new int[5][5][64];
+//    //TODO: NEW LOGIC SUGGESTED BY CHAT GPT
+//    private static void rho() {
+//        int[][][] newState = new int[5][5][64];
+//
+//        for (int x = 0; x < 5; x++) {
+//            for (int y = 0; y < 5; y++) {
+//                int offset = RHO_OFFSETS[x][y];
+//
+//                for (int z = 0; z < 64; z++) {
+//                    newState[x][y][z] = MY_STATE[x][y][(z + offset) % 64];
+//                }
+//            }
+//        }
+//
+//        MY_STATE = newState;
+//    }
 
+    private static void rho() {
         for (int x = 0; x < 5; x++) {
             for (int y = 0; y < 5; y++) {
                 int offset = RHO_OFFSETS[x][y];
 
+                // Step 1: Pack the 64 bits into a long
+                long lane = 0L;
                 for (int z = 0; z < 64; z++) {
-                    newState[x][y][z] = MY_STATE[x][y][(z + offset) % 64];
+                    lane |= ((long) MY_STATE[x][y][z] & 1L) << z;
+                }
+
+                // Step 2: Rotate
+                long rotatedLane = Long.rotateLeft(lane, offset);
+
+                // Step 3: Unpack the long back into 64 bits
+                for (int z = 0; z < 64; z++) {
+                    MY_STATE[x][y][z] = (int) ((rotatedLane >>> z) & 1L);
                 }
             }
         }
-
-        MY_STATE = newState;
     }
 
     //TODO: FIDDLE WITH THIS
@@ -196,29 +218,30 @@ class KECCAK_F {
     /**
      * ShiftRows transform
      */
+//    private static void pi() {
+//        int[][][] buffer = new int[5][5][64];
+//        for(int x = 0; x < 5; x++) {
+//            for(int y = 0; y < 5; y++) {
+//                System.arraycopy(MY_STATE[(x + 3 * y) % 5][x], 0, buffer[x][y], 0, 64);
+//            }
+//        }
+//
+//        MY_STATE = buffer;
+//    }
+
+    //TODO: THIS SHOULD WORK ACCORDING TO CHAT GPT
     private static void pi() {
         int[][][] buffer = new int[5][5][64];
-        for(int x = 0; x < 5; x++) {
-            for(int y = 0; y < 5; y++) {
-                System.arraycopy(MY_STATE[(x + 3 * y) % 5][x], 0, buffer[x][y], 0, 64);
+        for (int x = 0; x < 5; x++) {
+            for (int y = 0; y < 5; y++) {
+                for (int z = 0; z < 64; z++) {
+                    buffer[y][(2 * x + 3 * y) % 5][z] = MY_STATE[x][y][z];
+                }
             }
         }
-
         MY_STATE = buffer;
     }
 
-    //TODO: THIS SHOULD WORK ACCORDING TO CHAT GPT
-//    private static void pi() {
-//        int[][][] buffer = new int[5][5][64];
-//        for (int x = 0; x < 5; x++) {
-//            for (int y = 0; y < 5; y++) {
-//                for (int z = 0; z < 64; z++) {
-//                    buffer[y][(2 * x + 3 * y) % 5][z] = MY_STATE[x][y][z];
-//                }
-//            }
-//        }
-//        MY_STATE = buffer;
-//    }
 
 
     /**
