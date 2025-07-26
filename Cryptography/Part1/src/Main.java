@@ -35,6 +35,54 @@ public class Main {
             input = new Scanner(System.in);
 
             try {
+                // select program mode or quit
+                String userMode;
+                System.out.print(
+                        "Select an application mode:\n"
+                                + "1 - to compute hashes\n"
+                                + "2 - to compute tags\n"
+                                + "3 - to encrypt a file\n"
+                                + "4 - to decrypt a file\n"
+                                + "Q - to quit the program)\n> ");
+                userMode = input.nextLine().replace("\"", "");
+                if (userMode.equalsIgnoreCase("q")) {
+                    input.close();
+                    break;
+                }
+
+                // TODO Verify input file
+                File inputFile = new File(userInput);
+
+                // Apply mode
+                String result;
+                switch (userMode) {
+                    case "1":
+                        result = hashMode(inputFile);
+                        break;
+                    case "2":
+                        passphrase = validatePassphrase(input, passphrase);
+                        result = tagMode(inputFile, passphrase);
+                        break;
+                    case "3":
+                        passphrase = validatePassphrase(input, passphrase); 
+                        result = encryptMode(inputFile, passphrase);
+                        break;
+                    case "4":
+                        passphrase = validatePassphrase(input, passphrase);
+                        result = decryptMode(inputFile, passphrase);
+                        break;
+                    default:
+                        System.out.println("Invalid mode entered. Please select a valid mode.");
+                        continue; // restart the while loop
+                }
+
+                // TODO converge modes to write output and refactor the old code
+
+
+
+                
+                // old main code
+
                 System.out.println("\nSHA-3/SHAKE encryption");
 
                 System.out.print("Please enter a security level for SHA-3 (224,256,384,512) " +
@@ -45,29 +93,14 @@ public class Main {
 
                 final int ShakeSecLevel = Integer.parseInt(input.nextLine());
 
-                if (userInput == null) {
-                    System.out.print("Please enter the files path (Q to quit) > ");
-                    userInput = input.nextLine().replace("\"", "");
-
-                    if (userInput.equalsIgnoreCase("q")) {
-                        input.close();
-                        break;
-                    }
-                }
-
-                // Getting users passphrase and document path
-                fileBinary = Files.readAllBytes(Paths.get(userInput));
-                fileSize(fileBinary);
-
-                if (passphrase == null) {
-                    System.out.println("Please enter a passphrase: ");
-                    passphrase = input.nextLine();
-                }
-
                 passBinary = passphrase.getBytes(StandardCharsets.UTF_8);
                 System.out.println("Total KiB read: " + (double) passBinary.length / 1025 +
                         "\n");
 
+                // Process the document path
+                fileBinary = Files.readAllBytes(Paths.get(userInput));
+                fileSize(fileBinary);
+                
                 // outputting the sample document binary file.
                 final byte[] docSample = new byte[10];
                 System.arraycopy(fileBinary, 0, docSample, 0, docSample.length);
@@ -238,16 +271,23 @@ public class Main {
         }
     }
 
+    public static String validatePassphrase(Scanner input, String passphrase) {
+        if (passphrase == null) {
+            System.out.println("Please enter a passphrase: ");
+            passphrase = input.nextLine();
+        }
+        return passphrase;
+    }
+
     /**
      * Handles the first task of hashing a user specified file
      * using SHA-3-256 and -512 (bonus: -224, 384).
      * 
-     * @param inFile user specified input file
-     * @param outFile user specified output file
+     * @param inFile  user specified input file
      * @return all computed hashes
      */
-    public static String hashMode(File inFile, File outFile) {
-        
+    public static String hashMode(File inFile) {
+
         // call all 4 hashes or prompt for just 1 at a time
 
         return null;
@@ -258,13 +298,12 @@ public class Main {
      * for a user specified file and under a user specified pass phrase
      * using SHAKE-128 and -256 (bonus: compute tags for direct text input).
      * 
-     * @param inFile user specified input file
-     * @param outFile user specified output file
+     * @param inFile     user specified input file
      * @param passPhrase user specified pass phrase
      * @return all computed tags
      */
-    public static String tagMode(File inFile, File outFile, String passPhrase) {
-        
+    public static String tagMode(File inFile, String passPhrase) {
+
         // check if inFile exists
         // if not treat it as direct input
 
@@ -279,12 +318,11 @@ public class Main {
      * 3) hashing the nonce and the data file using SHAKE-128 as a stream cipher
      * (bonus: include a MAC tag using SHA-3-256 and the same key)
      * 
-     * @param inFile user specified input file
-     * @param outFile user specified output file
+     * @param inFile     user specified input file
      * @param passPhrase user specified pass phrase
      * @return the cryptogram (nonce || cyphertext)
      */
-    public static String encryptMode(File inFile, File outFile, String passPhrase) {
+    public static String encryptMode(File inFile, String passPhrase) {
 
         return null;
     }
@@ -294,12 +332,11 @@ public class Main {
      * the user specified pass phrase using SHAKE-128 and the supplied nonce.
      * (bonus: verify the MAC tag if included)
      * 
-     * @param inFile user specified input file
-     * @param outFile user specified output file
+     * @param inFile     user specified input file
      * @param passPhrase user specified pass phrase
      * @return decrypted message
      */
-    public static String decryptMode(File inFile, File outFile, String passPhrase) {
+    public static String decryptMode(File inFile, String passPhrase) {
 
         // check if MAC tag is included
 
