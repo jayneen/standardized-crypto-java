@@ -33,33 +33,30 @@ public class Main {
             input = new Scanner(System.in);
 
             try {
-                // Get input file if missing
-                while(userInput == null){
-                    System.out.println("Please enter an input file path. ");
-                    userInput = input.nextLine();
-                }
-
                 // Select program mode or quit
                 String userMode = null;
-                System.out.print(
-                        "Select an application mode:\n"
-                                + "1 - to compute hashes\n"
-                                + "2 - to compute tags\n"
-                                + "3 - to encrypt a file\n"
-                                + "4 - to decrypt a file\n"
-                                + "Q - to quit the program)\n> ");
+                System.out.print("""
+                        Select an application mode:
+                        1 - to compute hashes
+                        2 - to compute tags
+                        3 - to encrypt a file
+                        4 - to decrypt a file
+                        Q - to quit the program
+                        """);
                 userMode = input.nextLine().replace("\"", "");
                 if (userMode.equalsIgnoreCase("q")) {
                     input.close();
                     break;
                 }
 
-                File inputFile = new File(userInput);
-
                 // Convert to bytes and print file and pass phrase sizes
+                userInput = validateInputFile(input, userInput);
+                File inputFile = new File(userInput);
                 fileBinary = Files.readAllBytes(Paths.get(userInput));
-                System.out.print("File size: ");
+                System.out.print("Input file size: ");
                 fileSize(fileBinary);
+
+                passphrase = validatePassphrase(input, passphrase);
                 passBinary = passphrase.getBytes(StandardCharsets.UTF_8);
                 System.out.print("Pass phrase size: ");
                 fileSize(passBinary);
@@ -71,74 +68,76 @@ public class Main {
                         result = hashMode(inputFile);
                         break;
                     case "2":
-                        passphrase = validatePassphrase(input, passphrase);
                         result = tagMode(inputFile, passphrase);
                         break;
                     case "3":
-                        passphrase = validatePassphrase(input, passphrase);
                         result = encryptMode(inputFile, passphrase);
                         break;
                     case "4":
-                        passphrase = validatePassphrase(input, passphrase);
                         result = decryptMode(inputFile, passphrase);
                         break;
                     default:
-                        System.out.println("Invalid mode entered. Please select a valid mode.");
+                        System.out.println("Invalid mode entered. Please select a valid mode.\n");
                         continue; // restart the while loop
                 }
+
+                // temp check to avoid crashes and test file writing
+                // TODO remove
+                if (result == null){
+                    System.out.println("No data was returned.\n");
+                    result = "abc".getBytes();
+                }
+
+                // Print post processing size
+                System.out.print("Post processing: ");
+                fileSize(result);
 
                 // Write output
                 final File finalDocument;
                 if (userOutput == null) {
                     // Creating a new default file recursively
                     finalDocument = checkFile(new File("EncryptedFile.txt"));
-                    convertToHexAndWrite(finalDocument, result);
+                    // convertToHexAndWrite(finalDocument, result);
+                    Files.writeString(finalDocument.toPath(), new String(result, StandardCharsets.UTF_8) + "\n", StandardOpenOption.APPEND);
                 } else {
                     // Create or overwrite specified file
                     finalDocument = new File(userOutput);
-                    Files.write(finalDocument.toPath(), result, StandardOpenOption.CREATE);
+                    Files.writeString(finalDocument.toPath(), new String(result, StandardCharsets.UTF_8), StandardOpenOption.CREATE);
                 }
-
+                System.out.println("Wrote to " + finalDocument.getName() + "\n");
 
 
                 // old main code
 
-                System.out.println("\nSHA-3/SHAKE encryption");
+                // System.out.println("\nSHA-3/SHAKE encryption");
+                // System.out.print("Please enter a security level for SHA-3 (224,256,384,512) "
+                // +
+                // "> ");
+                // final int ShaSecLevel = Integer.parseInt(input.nextLine());
+                // System.out.print("\n\nPlease enter a security level for SHAKE (128,256) > ");
+                // final int ShakeSecLevel = Integer.parseInt(input.nextLine());
 
-                System.out.print("Please enter a security level for SHA-3 (224,256,384,512) " +
-                        "> ");
-                final int ShaSecLevel = Integer.parseInt(input.nextLine());
+                // // outputting the sample document binary file.
+                // final byte[] docSample = new byte[10];
+                // System.arraycopy(fileBinary, 0, docSample, 0, docSample.length);
+                // System.out.println("Previous file Hash: " + Arrays.toString(docSample));
 
-                System.out.print("\n\nPlease enter a security level for SHAKE (128,256) > ");
+                // // calling SHA3/SHAKE
+                // passBinary = SHA3SHAKE.SHAKE(ShakeSecLevel, passBinary, ShaSecLevel,
+                // null);
+                // fileBinary = SHA3SHAKE.SHA3(ShaSecLevel, fileBinary, null);
 
-                final int ShakeSecLevel = Integer.parseInt(input.nextLine());
-
-                // outputting the sample document binary file.
-                final byte[] docSample = new byte[10];
-                System.arraycopy(fileBinary, 0, docSample, 0, docSample.length);
-                System.out.println("Previous file Hash: " + Arrays.toString(docSample));
-
-                // calling SHA3/SHAKE
-                passBinary = SHA3SHAKE.SHAKE(ShakeSecLevel, passBinary, ShaSecLevel,
-                        null);
-                fileBinary = SHA3SHAKE.SHA3(ShaSecLevel, fileBinary, null);
-
-                // Outputting sample size Hashed document
-                final byte[] encryptedFile = encryptFile(passBinary, fileBinary);
-
-                System.arraycopy(encryptedFile, 0, docSample, 0, docSample.length);
-
-                System.out.println("Post Encrypted: " + Arrays.toString(docSample));
-
-                fileSize(encryptedFile);
+                // // Outputting sample size Hashed document
+                // final byte[] encryptedFile = encryptFile(passBinary, fileBinary);
+                // System.arraycopy(encryptedFile, 0, docSample, 0, docSample.length);
+                // System.out.println("Post Encrypted: " + Arrays.toString(docSample));
+                // fileSize(encryptedFile);
 
             } catch (InvalidPathException | IOException invalidPathException) {
-
                 System.out.println("""
                         This is an invalid file path or the file is unable to convert to binary!
                         Please try again!
                         """);
-
             }
         }
     }
@@ -146,21 +145,15 @@ public class Main {
     /**
      * Prints the size of the file or passphrase for informational purposes.
      *
-     * @param encryptedFile the file or passphrase in byte[]
+     * @param array the file or passphrase in byte[]
      */
-    private static void fileSize(byte[] encryptedFile) {
-
-        if (encryptedFile.length < 1024) {
-
-            System.out.println("Total Bytes read: " + (double) encryptedFile.length);
-
-        } else if (1025 <= encryptedFile.length && encryptedFile.length < 1_048_576) {
-
-            System.out.println("Total KiB read: " + (double) encryptedFile.length / 1025);
-
-        } else if (1_048_576 <= encryptedFile.length) {
-
-            System.out.println("Total MiB read: " + (double) encryptedFile.length / 1_048_576);
+    private static void fileSize(byte[] array) {
+        if (array.length < 1024) {
+            System.out.println("Total Bytes read: " + (double) array.length);
+        } else if (1025 <= array.length && array.length < 1_048_576) {
+            System.out.println("Total KiB read: " + (double) array.length / 1025);
+        } else if (1_048_576 <= array.length) {
+            System.out.println("Total MiB read: " + (double) array.length / 1_048_576);
         }
     }
 
@@ -171,19 +164,13 @@ public class Main {
      * @return the newly generated file to be writen on.
      */
     public static File checkFile(File theFile) {
-
         try {
-
             if (!theFile.createNewFile()) {
-
                 return checkFile(theFile, 1);
             }
-
         } catch (final IOException ioException) {
-
             System.out.println("Unable to create new file!");
         }
-
         return theFile;
     }
 
@@ -195,23 +182,15 @@ public class Main {
      * @return the newly generated file to be writen on.
      */
     private static File checkFile(File theFile, int counter) {
-
         try {
-
             if (!theFile.createNewFile()) {
-
                 theFile = new File("EncryptedFile-" + counter + ".txt");
-
                 counter++;
-
                 return checkFile(theFile, counter);
             }
         } catch (IOException ioException) {
-
             System.out.println("Unable to create new file!");
-
         }
-
         return theFile;
     }
 
@@ -268,12 +247,32 @@ public class Main {
         }
     }
 
+    /**
+     * Prompts the user for a pass phrase if null.
+     * 
+     * @param input scanner
+     * @param passphrase current passphrase
+     */
     public static String validatePassphrase(Scanner input, String passphrase) {
-        if (passphrase == null) {
+        while (passphrase == null) {
             System.out.println("Please enter a passphrase: ");
             passphrase = input.nextLine();
         }
         return passphrase;
+    }
+
+    /**
+     * Prompts the user for an input file if null.
+     * 
+     * @param input scanner
+     * @param inputFile current input file path
+     */
+    public static String validateInputFile(Scanner input, String inputFile) {
+        while (inputFile == null) {
+            System.out.println("Please enter an input file path: ");
+            inputFile = input.nextLine();
+        }
+        return inputFile;
     }
 
     /**
