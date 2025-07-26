@@ -10,9 +10,10 @@ import java.util.Arrays;
 import java.util.Scanner;
 
 public class Main {
+    private static final Scanner input = new Scanner(System.in);
 
     public static void main(String[] args) {
-        Scanner input;
+
 
         while (true) {
 
@@ -30,7 +31,6 @@ public class Main {
             byte[] fileBinary;
             byte[] passBinary;
 
-            input = new Scanner(System.in);
 
             try {
                 // Select program mode or quit
@@ -65,10 +65,11 @@ public class Main {
                 byte[] result;
                 switch (userMode) {
                     case "1":
-                        result = hashMode(inputFile);
+                        result = Arrays.toString(hashMode(inputFile));
                         break;
                     case "2":
-                        result = tagMode(inputFile, passphrase);
+                        passphrase = validatePassphrase(input, passphrase);
+                        result = Arrays.toString(tagMode(inputFile, passphrase));
                         break;
                     case "3":
                         result = encryptMode(inputFile, passphrase);
@@ -204,7 +205,7 @@ public class Main {
      * @return the users encrypted hashed document.
      */
     private static byte[] encryptFile(final byte[] theHashedPassPhrase,
-            final byte[] theHashedDocument) {
+                                      final byte[] theHashedDocument) {
 
         if (theHashedDocument.length != theHashedPassPhrase.length) {
             throw new InvalidParameterException("The hash for the passphrase and the hash " +
@@ -222,7 +223,7 @@ public class Main {
     }
 
     public static void convertToHexAndWrite(final File theFile,
-            final byte[] theEncryptedFile) {
+                                            final byte[] theEncryptedFile) {
         final StringBuilder sb = new StringBuilder(theEncryptedFile.length * 2);
 
         for (byte theFileByte : theEncryptedFile) {
@@ -278,32 +279,128 @@ public class Main {
     /**
      * Handles the first task of hashing a user specified file
      * using SHA-3-256 and -512 (bonus: -224, 384).
-     * 
+     *
      * @param inFile user specified input file
      * @return all computed hashes
      */
-    public static byte[] hashMode(File inFile) {
+    public static byte[][] hashMode(File inFile) {
 
         // call all 4 hashes or prompt for just 1 at a time
 
-        return null;
+        System.out.println("Computing the SHA-3-256, SHA-3-512, SHA-3-224, and SHA-3-384...");
+
+        StringBuilder result = new StringBuilder();
+        byte[] sha256 = new byte[0];
+        byte[] sha224 = new byte[0];
+        byte[] sha384 = new byte[0];
+        byte[] sha512 = new byte[0];
+
+        try {
+
+            sha256 = SHA3SHAKE.SHA3(256, Files.readAllBytes(inFile.toPath()),
+                    null);
+            sha512 = SHA3SHAKE.SHA3(512, Files.readAllBytes(inFile.toPath()),
+                    null);
+            System.out.println("Outputting...");
+            sha224 = SHA3SHAKE.SHA3(224, Files.readAllBytes(inFile.toPath()),
+                    null);
+            sha384 = SHA3SHAKE.SHA3(384, Files.readAllBytes(inFile.toPath()),
+                    null);
+
+            result.append("SHA-3-256: ").append(Arrays.toString(sha256));
+            result.append("\n\nSHA-3-512: ").append(Arrays.toString(sha512));
+            result.append("\n\nSHA-3-224: ").append(Arrays.toString(sha224));
+            result.append("\n\nSHA-3-384: ").append(Arrays.toString(sha384));
+
+            System.out.println(result);
+
+        } catch (final IOException ioe) {
+            System.out.println("Unable to convert the file into a binary.");
+        }
+
+        return new byte[][]{sha256, sha224, sha384, sha512};
     }
 
     /**
      * Handles the second task of creating MAC tags of user specified length
      * for a user specified file and under a user specified pass phrase
      * using SHAKE-128 and -256 (bonus: compute tags for direct text input).
-     * 
-     * @param inFile     user specified input file
+     *
+     * @param inFile     user specified input file.
+     *                   Pass NULL to have the user use a text
+     *                   input.
      * @param passPhrase user specified pass phrase
      * @return all computed tags
      */
-    public static byte[] tagMode(File inFile, String passPhrase) {
+    public static byte[][] tagMode(File inFile, String passPhrase) {
+        StringBuilder result = new StringBuilder();
+        byte[] shake128;
+        byte[] shake256;
+        byte[] kMac = new byte[0];
+        int len = 0;
 
-        // check if inFile exists
-        // if not treat it as direct input
+        if (inFile == null) {
 
-        return null;
+            System.out.print("\n\nPlease enter a message: > ");
+            String message = input.nextLine();
+
+            System.out.print("\n\nPlease designate the length of your MACs tag > ");
+
+            len = Integer.parseInt(String.valueOf(input.nextLine()));
+
+            byte[] msgByte = message.getBytes(StandardCharsets.UTF_8);
+            byte[] thePass = passPhrase.getBytes(StandardCharsets.UTF_8);
+            kMac = new byte[thePass.length + msgByte.length];
+
+            System.arraycopy(thePass, 0, kMac, 0, thePass.length);
+            System.arraycopy(msgByte, 0, kMac, thePass.length, msgByte.length);
+
+        } else {
+
+            try {
+
+                System.out.print("\n\nPlease designate the length of your MACs tag > ");
+
+                len = Integer.parseInt(String.valueOf(input.nextLine()));
+
+                byte[] theFile = Files.readAllBytes(inFile.toPath());
+                byte[] thePass = passPhrase.getBytes(StandardCharsets.UTF_8);
+                kMac = new byte[theFile.length + thePass.length];
+
+                System.arraycopy(thePass, 0, kMac, 0, thePass.length);
+                System.arraycopy(theFile, 0, kMac, thePass.length, theFile.length);
+
+
+            } catch (final IOException exception) {
+
+                System.out.println("\nUnable to convert the file into a binary.");
+
+            } catch (final NumberFormatException nfe) {
+
+                System.out.println("\nThe length provided is invalid. Please try again.\n\n");
+                tagMode(inFile, passPhrase);
+
+            }
+        }
+
+        if(kMac.length == 0 || len == 0) {
+            throw new InvalidParameterException("The length must be greater than 0!");
+        }
+
+        System.out.println("Computing the SHAKE-128 and SHAKE-256");
+
+        shake128 = SHA3SHAKE.SHAKE(128, kMac, len, null);
+
+        System.out.println("Outputting...");
+
+        shake256 = SHA3SHAKE.SHAKE(256, kMac, len, null);
+
+        result.append("SHAKE-128: ").append(Arrays.toString(shake128));
+        result.append("\n\nSHAKE-256: ").append(Arrays.toString(shake256));
+
+        System.out.println(result);
+
+        return new byte[][]{shake128, shake256};
     }
 
     /**
@@ -313,7 +410,7 @@ public class Main {
      * 2) obtaining a random 128-bit nonce
      * 3) hashing the nonce and the data file using SHAKE-128 as a stream cipher
      * (bonus: include a MAC tag using SHA-3-256 and the same key)
-     * 
+     *
      * @param inFile     user specified input file
      * @param passPhrase user specified pass phrase
      * @return the cryptogram (nonce || cyphertext)
@@ -327,7 +424,7 @@ public class Main {
      * Handles the fourth task of decrypting a user specified file under
      * the user specified pass phrase using SHAKE-128 and the supplied nonce.
      * (bonus: verify the MAC tag if included)
-     * 
+     *
      * @param inFile     user specified input file
      * @param passPhrase user specified pass phrase
      * @return decrypted message
