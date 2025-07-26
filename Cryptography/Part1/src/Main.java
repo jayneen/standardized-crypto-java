@@ -95,7 +95,8 @@ public class Main {
 
                 } else {
 
-                    // if the name is provided through command line arguments, create and overwrite it
+                    // if the name is provided through command line arguments, create and overwrite
+                    // it
                     final File finalDocument = new File(userOutput);
                     Files.write(finalDocument.toPath(), encryptedFile, StandardOpenOption.CREATE);
 
@@ -194,7 +195,7 @@ public class Main {
      * @return the users encrypted hashed document.
      */
     private static byte[] encryptFile(final byte[] theHashedPassPhrase,
-                                      final byte[] theHashedDocument) {
+            final byte[] theHashedDocument) {
 
         if (theHashedDocument.length != theHashedPassPhrase.length) {
             throw new InvalidParameterException("The hash for the passphrase and the hash " +
@@ -212,7 +213,7 @@ public class Main {
     }
 
     public static void convertToHexAndWrite(final File theFile,
-                                            final byte[] theEncryptedFile) {
+            final byte[] theEncryptedFile) {
         final StringBuilder sb = new StringBuilder(theEncryptedFile.length * 2);
 
         for (byte theFileByte : theEncryptedFile) {
@@ -221,7 +222,7 @@ public class Main {
 
         String rawHex = sb.toString();
 
-// Format with a space every 8 characters
+        // Format with a space every 8 characters
         StringBuilder formattedHex = new StringBuilder();
         for (int i = 0; i < rawHex.length(); i++) {
             formattedHex.append(rawHex.charAt(i));
@@ -237,4 +238,71 @@ public class Main {
         }
     }
 
+    /**
+     * Handles the first task of hashing a user specified file
+     * using SHA-3-256 and -512 (bonus: -224, 384).
+     * 
+     * @param inFile user specified input file
+     * @param outFile user specified output file
+     * @return all computed hashes
+     */
+    public static String hashMode(File inFile, File outFile) {
+        
+        // call all 4 hashes or prompt for just 1 at a time
+
+        return null;
+    }
+
+    /**
+     * Handles the second task of creating MAC tags of user specified length
+     * for a user specified file and under a user specified pass phrase
+     * using SHAKE-128 and -256 (bonus: compute tags for direct text input).
+     * 
+     * @param inFile user specified input file
+     * @param outFile user specified output file
+     * @param passPhrase user specified pass phrase
+     * @return all computed tags
+     */
+    public static String tagMode(File inFile, File outFile, String passPhrase) {
+        
+        // check if inFile exists
+        // if not treat it as direct input
+
+        return null;
+    }
+
+    /**
+     * Handles the third task of ecnrypting a user specified file under
+     * the user specified pass phrase by:
+     * 1) hashing the pass phrase with SHAKE-128 as the key
+     * 2) obtaining a random 128-bit nonce
+     * 3) hashing the nonce and the data file using SHAKE-128 as a stream cipher
+     * (bonus: include a MAC tag using SHA-3-256 and the same key)
+     * 
+     * @param inFile user specified input file
+     * @param outFile user specified output file
+     * @param passPhrase user specified pass phrase
+     * @return the cryptogram (nonce || cyphertext)
+     */
+    public static String encryptMode(File inFile, File outFile, String passPhrase) {
+
+        return null;
+    }
+
+    /**
+     * Handles the fourth task of decrypting a user specified file under
+     * the user specified pass phrase using SHAKE-128 and the supplied nonce.
+     * (bonus: verify the MAC tag if included)
+     * 
+     * @param inFile user specified input file
+     * @param outFile user specified output file
+     * @param passPhrase user specified pass phrase
+     * @return decrypted message
+     */
+    public static String decryptMode(File inFile, File outFile, String passPhrase) {
+
+        // check if MAC tag is included
+
+        return null;
+    }
 }
