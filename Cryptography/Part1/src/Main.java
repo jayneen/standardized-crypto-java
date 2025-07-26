@@ -22,10 +22,8 @@ public class Main {
 
             if (args.length > 0)
                 userInput = args[0];
-
             if (args.length > 1)
                 userOutput = args[1];
-
             if (args.length > 2)
                 passphrase = args[2];
 
@@ -35,8 +33,14 @@ public class Main {
             input = new Scanner(System.in);
 
             try {
-                // select program mode or quit
-                String userMode;
+                // Get input file if missing
+                while(userInput == null){
+                    System.out.println("Please enter an input file path. ");
+                    userInput = input.nextLine();
+                }
+
+                // Select program mode or quit
+                String userMode = null;
                 System.out.print(
                         "Select an application mode:\n"
                                 + "1 - to compute hashes\n"
@@ -50,11 +54,18 @@ public class Main {
                     break;
                 }
 
-                // TODO Verify input file
                 File inputFile = new File(userInput);
 
+                // Convert to bytes and print file and pass phrase sizes
+                fileBinary = Files.readAllBytes(Paths.get(userInput));
+                System.out.print("File size: ");
+                fileSize(fileBinary);
+                passBinary = passphrase.getBytes(StandardCharsets.UTF_8);
+                System.out.print("Pass phrase size: ");
+                fileSize(passBinary);
+
                 // Apply mode
-                String result;
+                byte[] result;
                 switch (userMode) {
                     case "1":
                         result = hashMode(inputFile);
@@ -64,7 +75,7 @@ public class Main {
                         result = tagMode(inputFile, passphrase);
                         break;
                     case "3":
-                        passphrase = validatePassphrase(input, passphrase); 
+                        passphrase = validatePassphrase(input, passphrase);
                         result = encryptMode(inputFile, passphrase);
                         break;
                     case "4":
@@ -76,11 +87,20 @@ public class Main {
                         continue; // restart the while loop
                 }
 
-                // TODO converge modes to write output and refactor the old code
+                // Write output
+                final File finalDocument;
+                if (userOutput == null) {
+                    // Creating a new default file recursively
+                    finalDocument = checkFile(new File("EncryptedFile.txt"));
+                    convertToHexAndWrite(finalDocument, result);
+                } else {
+                    // Create or overwrite specified file
+                    finalDocument = new File(userOutput);
+                    Files.write(finalDocument.toPath(), result, StandardOpenOption.CREATE);
+                }
 
 
 
-                
                 // old main code
 
                 System.out.println("\nSHA-3/SHAKE encryption");
@@ -93,14 +113,6 @@ public class Main {
 
                 final int ShakeSecLevel = Integer.parseInt(input.nextLine());
 
-                passBinary = passphrase.getBytes(StandardCharsets.UTF_8);
-                System.out.println("Total KiB read: " + (double) passBinary.length / 1025 +
-                        "\n");
-
-                // Process the document path
-                fileBinary = Files.readAllBytes(Paths.get(userInput));
-                fileSize(fileBinary);
-                
                 // outputting the sample document binary file.
                 final byte[] docSample = new byte[10];
                 System.arraycopy(fileBinary, 0, docSample, 0, docSample.length);
@@ -119,21 +131,6 @@ public class Main {
                 System.out.println("Post Encrypted: " + Arrays.toString(docSample));
 
                 fileSize(encryptedFile);
-
-                if (userOutput == null) {
-
-                    // Creating a new file recursively
-                    final File finalDocument = checkFile(new File("EncryptedFile.txt"));
-                    convertToHexAndWrite(finalDocument, encryptedFile);
-
-                } else {
-
-                    // if the name is provided through command line arguments, create and overwrite
-                    // it
-                    final File finalDocument = new File(userOutput);
-                    Files.write(finalDocument.toPath(), encryptedFile, StandardOpenOption.CREATE);
-
-                }
 
             } catch (InvalidPathException | IOException invalidPathException) {
 
@@ -283,10 +280,10 @@ public class Main {
      * Handles the first task of hashing a user specified file
      * using SHA-3-256 and -512 (bonus: -224, 384).
      * 
-     * @param inFile  user specified input file
+     * @param inFile user specified input file
      * @return all computed hashes
      */
-    public static String hashMode(File inFile) {
+    public static byte[] hashMode(File inFile) {
 
         // call all 4 hashes or prompt for just 1 at a time
 
@@ -302,7 +299,7 @@ public class Main {
      * @param passPhrase user specified pass phrase
      * @return all computed tags
      */
-    public static String tagMode(File inFile, String passPhrase) {
+    public static byte[] tagMode(File inFile, String passPhrase) {
 
         // check if inFile exists
         // if not treat it as direct input
@@ -322,7 +319,7 @@ public class Main {
      * @param passPhrase user specified pass phrase
      * @return the cryptogram (nonce || cyphertext)
      */
-    public static String encryptMode(File inFile, String passPhrase) {
+    public static byte[] encryptMode(File inFile, String passPhrase) {
 
         return null;
     }
@@ -336,7 +333,7 @@ public class Main {
      * @param passPhrase user specified pass phrase
      * @return decrypted message
      */
-    public static String decryptMode(File inFile, String passPhrase) {
+    public static byte[] decryptMode(File inFile, String passPhrase) {
 
         // check if MAC tag is included
 
