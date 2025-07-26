@@ -14,7 +14,6 @@ public class Main {
 
     public static void main(String[] args) {
 
-
         while (true) {
 
             String userInput = null; // file to read from
@@ -30,7 +29,6 @@ public class Main {
 
             byte[] fileBinary;
             byte[] passBinary;
-
 
             try {
                 // Select program mode or quit
@@ -62,20 +60,21 @@ public class Main {
                 fileSize(passBinary);
 
                 // Apply mode
-                byte[] result;
+                byte[][] result;
                 switch (userMode) {
                     case "1":
-                        result = Arrays.toString(hashMode(inputFile));
+                        result = hashMode(inputFile);
                         break;
                     case "2":
-                        passphrase = validatePassphrase(input, passphrase);
-                        result = Arrays.toString(tagMode(inputFile, passphrase));
+                        result = tagMode(inputFile, passphrase);
                         break;
                     case "3":
-                        result = encryptMode(inputFile, passphrase);
+                        result = new byte[1][];
+                        result[0] = encryptMode(inputFile, passphrase);
                         break;
                     case "4":
-                        result = decryptMode(inputFile, passphrase);
+                        result = new byte[1][];
+                        result[0] = decryptMode(inputFile, passphrase);
                         break;
                     default:
                         System.out.println("Invalid mode entered. Please select a valid mode.\n");
@@ -84,29 +83,34 @@ public class Main {
 
                 // temp check to avoid crashes and test file writing
                 // TODO remove
-                if (result == null){
+                if (result == null) {
+                    result = new byte[1][];
                     System.out.println("No data was returned.\n");
-                    result = "abc".getBytes();
+                    result[0] = "abc".getBytes();
                 }
 
                 // Print post processing size
-                System.out.print("Post processing: ");
-                fileSize(result);
+                System.out.println("Post processing: ");
+                for (int i = 0; i < result.length; i++) {
+                    System.out.println("Output " + (i + 1) + ": ");
+                    fileSize(result[i]);
+                }
 
                 // Write output
                 final File finalDocument;
                 if (userOutput == null) {
                     // Creating a new default file recursively
                     finalDocument = checkFile(new File("EncryptedFile.txt"));
-                    // convertToHexAndWrite(finalDocument, result);
-                    Files.writeString(finalDocument.toPath(), new String(result, StandardCharsets.UTF_8) + "\n", StandardOpenOption.APPEND);
+                    // Files.writeString(finalDocument.toPath(), output + "\n", StandardOpenOption.APPEND);
                 } else {
                     // Create or overwrite specified file
                     finalDocument = new File(userOutput);
-                    Files.writeString(finalDocument.toPath(), new String(result, StandardCharsets.UTF_8), StandardOpenOption.CREATE);
+                    // Files.writeString(finalDocument.toPath(), output, StandardOpenOption.CREATE);
+                }
+                for(int i = 0; i < result.length; i++){
+                    convertToHexAndWrite(finalDocument, result[i]);
                 }
                 System.out.println("Wrote to " + finalDocument.getName() + "\n");
-
 
                 // old main code
 
@@ -205,7 +209,7 @@ public class Main {
      * @return the users encrypted hashed document.
      */
     private static byte[] encryptFile(final byte[] theHashedPassPhrase,
-                                      final byte[] theHashedDocument) {
+            final byte[] theHashedDocument) {
 
         if (theHashedDocument.length != theHashedPassPhrase.length) {
             throw new InvalidParameterException("The hash for the passphrase and the hash " +
@@ -223,7 +227,7 @@ public class Main {
     }
 
     public static void convertToHexAndWrite(final File theFile,
-                                            final byte[] theEncryptedFile) {
+            final byte[] theEncryptedFile) {
         final StringBuilder sb = new StringBuilder(theEncryptedFile.length * 2);
 
         for (byte theFileByte : theEncryptedFile) {
@@ -251,7 +255,7 @@ public class Main {
     /**
      * Prompts the user for a pass phrase if null.
      * 
-     * @param input scanner
+     * @param input      scanner
      * @param passphrase current passphrase
      */
     public static String validatePassphrase(Scanner input, String passphrase) {
@@ -265,7 +269,7 @@ public class Main {
     /**
      * Prompts the user for an input file if null.
      * 
-     * @param input scanner
+     * @param input     scanner
      * @param inputFile current input file path
      */
     public static String validateInputFile(Scanner input, String inputFile) {
@@ -318,7 +322,7 @@ public class Main {
             System.out.println("Unable to convert the file into a binary.");
         }
 
-        return new byte[][]{sha256, sha224, sha384, sha512};
+        return new byte[][] { sha256, sha224, sha384, sha512 };
     }
 
     /**
@@ -370,7 +374,6 @@ public class Main {
                 System.arraycopy(thePass, 0, kMac, 0, thePass.length);
                 System.arraycopy(theFile, 0, kMac, thePass.length, theFile.length);
 
-
             } catch (final IOException exception) {
 
                 System.out.println("\nUnable to convert the file into a binary.");
@@ -383,7 +386,7 @@ public class Main {
             }
         }
 
-        if(kMac.length == 0 || len == 0) {
+        if (kMac.length == 0 || len == 0) {
             throw new InvalidParameterException("The length must be greater than 0!");
         }
 
@@ -400,7 +403,7 @@ public class Main {
 
         System.out.println(result);
 
-        return new byte[][]{shake128, shake256};
+        return new byte[][] { shake128, shake256 };
     }
 
     /**
