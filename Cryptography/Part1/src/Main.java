@@ -1,3 +1,4 @@
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -6,6 +7,7 @@ import java.nio.file.InvalidPathException;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.security.InvalidParameterException;
+import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Scanner;
 
@@ -27,6 +29,9 @@ public class Main {
             if (args.length > 2)
                 passphrase = args[2];
 
+            byte[] fileBinary;
+            byte[] passBinary;
+
             try {
                 // Select program mode or quit
                 String userMode = null;
@@ -44,29 +49,32 @@ public class Main {
                     break;
                 }
 
-                // Apply mode and validate required inputs
-                File inputFile = null;
+                // Convert to bytes and print file and pass phrase sizes
+                userInput = validateInputFile(input, userInput);
+                File inputFile = new File(userInput);
+                fileBinary = Files.readAllBytes(Paths.get(userInput));
+                System.out.print("Input file size: ");
+                fileSize(fileBinary);
+
+                passphrase = validatePassphrase(input, passphrase);
+                passBinary = passphrase.getBytes(StandardCharsets.UTF_8);
+                System.out.print("Pass phrase size: ");
+                fileSize(passBinary);
+
+                // Apply mode
                 byte[][] result;
                 switch (userMode) {
                     case "1":
-                        inputFile = new File(validateInputFile(input, userInput));
                         result = hashMode(inputFile);
                         break;
                     case "2":
-
-                        inputFile = new File(validateInputFile(input, userInput));
-                        passphrase = validatePassphrase(input, passphrase);
                         result = tagMode(inputFile, passphrase);
                         break;
                     case "3":
-                        inputFile = new File(validateInputFile(input, userInput));
-                        passphrase = validatePassphrase(input, passphrase);
                         result = new byte[1][];
                         result[0] = encryptMode(inputFile, passphrase);
                         break;
                     case "4":
-                        inputFile = new File(validateInputFile(input, userInput));
-                        passphrase = validatePassphrase(input, passphrase);
                         result = new byte[1][];
                         result[0] = decryptMode(inputFile, passphrase);
                         break;
@@ -75,12 +83,18 @@ public class Main {
                         continue; // restart the while loop
                 }
 
+                // temp check to avoid crashes and test file writing
+                // TODO remove
+                if (result == null) {
+                    result = new byte[1][];
+                    System.out.println("No data was returned.\n");
+                    result[0] = "abc".getBytes();
+                }
 
                 // Print post processing size
                 System.out.println("Post processing: ");
                 for (int i = 0; i < result.length; i++) {
                     System.out.println("Output " + (i + 1) + ": ");
-                    assert result[i] != null;
                     fileSize(result[i]);
                 }
 
@@ -89,31 +103,48 @@ public class Main {
                 if (userOutput == null) {
                     // Creating a new default file recursively
                     finalDocument = checkFile(new File("EncryptedFile.txt"));
-                    // Files.writeString(finalDocument.toPath(), output + "\n",
-                    // StandardOpenOption.APPEND);
+                    // Files.writeString(finalDocument.toPath(), output + "\n", StandardOpenOption.APPEND);
                 } else {
                     // Create or overwrite specified file
                     finalDocument = new File(userOutput);
                     // Files.writeString(finalDocument.toPath(), output, StandardOpenOption.CREATE);
                 }
-                for (byte[] bytes : result) {
-                    convertToHexAndWrite(finalDocument, bytes);
+                for(int i = 0; i < result.length; i++){
+                    convertToHexAndWrite(finalDocument, result[i]);
                 }
                 System.out.println("Wrote to " + finalDocument.getName() + "\n");
+
+                // old main code
+
+                // System.out.println("\nSHA-3/SHAKE encryption");
+                // System.out.print("Please enter a security level for SHA-3 (224,256,384,512) "
+                // +
+                // "> ");
+                // final int ShaSecLevel = Integer.parseInt(input.nextLine());
+                // System.out.print("\n\nPlease enter a security level for SHAKE (128,256) > ");
+                // final int ShakeSecLevel = Integer.parseInt(input.nextLine());
+
+                // // outputting the sample document binary file.
+                // final byte[] docSample = new byte[10];
+                // System.arraycopy(fileBinary, 0, docSample, 0, docSample.length);
+                // System.out.println("Previous file Hash: " + Arrays.toString(docSample));
+
+                // // calling SHA3/SHAKE
+                // passBinary = SHA3SHAKE.SHAKE(ShakeSecLevel, passBinary, ShaSecLevel,
+                // null);
+                // fileBinary = SHA3SHAKE.SHA3(ShaSecLevel, fileBinary, null);
+
+                // // Outputting sample size Hashed document
+                // final byte[] encryptedFile = encryptFile(passBinary, fileBinary);
+                // System.arraycopy(encryptedFile, 0, docSample, 0, docSample.length);
+                // System.out.println("Post Encrypted: " + Arrays.toString(docSample));
+                // fileSize(encryptedFile);
 
             } catch (InvalidPathException | IOException invalidPathException) {
                 System.out.println("""
                         This is an invalid file path or the file is unable to convert to binary!
                         Please try again!
                         """);
-                // avoid softlock due to bad command line input
-                if (args.length > 0) {
-                    System.out.println("""
-                            Ending due to invalid command line file paths.
-                            """);
-                    return;
-                }
-                ;
             }
         }
     }
@@ -224,7 +255,7 @@ public class Main {
     }
 
     /**
-     * Prompts the user for a pass phrase if null and prints its size.
+     * Prompts the user for a pass phrase if null.
      *
      * @param input      scanner
      * @param passphrase current passphrase
@@ -234,28 +265,20 @@ public class Main {
             System.out.println("Please enter a passphrase: ");
             passphrase = input.nextLine();
         }
-
-        System.out.print("Pass phrase size: ");
-        fileSize(passphrase.getBytes(StandardCharsets.UTF_8));
-
         return passphrase;
     }
 
     /**
-     * Prompts the user for an input file if null and prints its size.
+     * Prompts the user for an input file if null.
      *
      * @param input     scanner
      * @param inputFile current input file path
      */
-    public static String validateInputFile(Scanner input, String inputFile) throws IOException {
+    public static String validateInputFile(Scanner input, String inputFile) {
         while (inputFile == null) {
             System.out.println("Please enter an input file path: ");
             inputFile = input.nextLine();
         }
-
-        System.out.print("Input file size: ");
-        fileSize(Files.readAllBytes(Paths.get(inputFile)));
-
         return inputFile;
     }
 
@@ -301,7 +324,7 @@ public class Main {
             System.out.println("Unable to convert the file into a binary.");
         }
 
-        return new byte[][]{sha256, sha224, sha384, sha512};
+        return new byte[][] { sha256, sha224, sha384, sha512 };
     }
 
     /**
@@ -322,31 +345,48 @@ public class Main {
         byte[] kMac = new byte[0];
         int len = 0;
 
+        if (inFile == null) {
 
-        try {
+            System.out.print("\n\nPlease enter a message: > ");
+            String message = input.nextLine();
 
             System.out.print("\n\nPlease designate the length of your MACs tag > ");
 
             len = Integer.parseInt(String.valueOf(input.nextLine()));
 
-            byte[] theFile = Files.readAllBytes(inFile.toPath());
+            byte[] msgByte = message.getBytes(StandardCharsets.UTF_8);
             byte[] thePass = passPhrase.getBytes(StandardCharsets.UTF_8);
-            kMac = new byte[theFile.length + thePass.length];
+            kMac = new byte[thePass.length + msgByte.length];
 
             System.arraycopy(thePass, 0, kMac, 0, thePass.length);
-            System.arraycopy(theFile, 0, kMac, thePass.length, theFile.length);
+            System.arraycopy(msgByte, 0, kMac, thePass.length, msgByte.length);
 
-        } catch (final IOException exception) {
+        } else {
 
-            System.out.println("\nUnable to convert the file into a binary.");
+            try {
 
-        } catch (final NumberFormatException nfe) {
+                System.out.print("\n\nPlease designate the length of your MACs tag > ");
 
-            System.out.println("\nThe length provided is invalid. Please try again.\n\n");
-            tagMode(inFile, passPhrase);
+                len = Integer.parseInt(String.valueOf(input.nextLine()));
 
+                byte[] theFile = Files.readAllBytes(inFile.toPath());
+                byte[] thePass = passPhrase.getBytes(StandardCharsets.UTF_8);
+                kMac = new byte[theFile.length + thePass.length];
+
+                System.arraycopy(thePass, 0, kMac, 0, thePass.length);
+                System.arraycopy(theFile, 0, kMac, thePass.length, theFile.length);
+
+            } catch (final IOException exception) {
+
+                System.out.println("\nUnable to convert the file into a binary.");
+
+            } catch (final NumberFormatException nfe) {
+
+                System.out.println("\nThe length provided is invalid. Please try again.\n\n");
+                tagMode(inFile, passPhrase);
+
+            }
         }
-
 
         if (kMac.length == 0 || len == 0) {
             throw new InvalidParameterException("The length must be greater than 0!");
@@ -365,10 +405,8 @@ public class Main {
 
         System.out.println(result);
 
-        return new byte[][]{shake128, shake256};
+        return new byte[][] { shake128, shake256 };
     }
-
-
 
     /**
      * Handles the third task of ecnrypting a user specified file under
@@ -380,11 +418,48 @@ public class Main {
      *
      * @param inFile     user specified input file
      * @param passPhrase user specified pass phrase
-     * @return the cryptogram (nonce || cyphertext)
+     * @return the cryptogram (nonce || cyphertext || MAC)
      */
-    public static byte[] encryptMode(File inFile, String passPhrase) {
+    public static byte[] encryptMode(File inFile, String passPhrase) throws IOException
+    {
+        //I am throwing an exception because of this, I chose this as the way to handle it
+        //instead of making a new method and being complicated. The upside is this is easy
+        //the downside is I load the entire file into memory at once and thus cant handle
+        //more than the JVMs memory. If there is a OUTOFMEMORY error, it is from this.
+        byte[] fileBytes = Files.readAllBytes(inFile.toPath());
 
-        return null;
+        //1) hashing the pass phrase with SHAKE-128 as the key
+        byte[] key = SHA3SHAKE.SHAKE(128, passPhrase.getBytes(StandardCharsets.UTF_8), 16, null);
+
+        //2) obtaining a random 128-bit nonce
+        byte[] nonce = new byte[16];
+
+        //3) hashing the nonce and the key using SHAKE-128 as a stream cipher (nonce + key)
+        SHA3SHAKE shake = new SHA3SHAKE();
+        shake.init(128);
+        shake.absorb(nonce);
+        shake.absorb(key);
+        byte[] keystream = shake.squeeze(fileBytes.length);
+
+        //Encrypting, ciphertext = plaintext XOR (step 3)
+        byte[] ciphertext = new byte[fileBytes.length];
+        for (int i = 0; i < fileBytes.length; i++) {
+            ciphertext[i] = (byte) (fileBytes[i] ^ keystream[i]);
+        }
+
+        //(bonus: include a MAC tag using SHA-3-256 and the same key) (key + ciphertext)
+        byte[] macInput = new byte[key.length + ciphertext.length];
+        System.arraycopy(key, 0, macInput, 0, key.length);
+        System.arraycopy(ciphertext, 0, macInput, key.length, ciphertext.length);
+        byte[] mac = SHA3SHAKE.SHA3(256, macInput, null);
+
+        //Putting it together, nonce + ciphertext + mac
+        byte[] output = new byte[nonce.length + ciphertext.length + mac.length];
+        System.arraycopy(nonce, 0, output, 0, nonce.length);
+        System.arraycopy(ciphertext, 0, output, nonce.length, ciphertext.length);
+        System.arraycopy(mac, 0, output, nonce.length + ciphertext.length, mac.length);
+
+        return output;
     }
 
     /**
@@ -397,9 +472,85 @@ public class Main {
      * @return decrypted message
      */
     public static byte[] decryptMode(File inFile, String passPhrase) {
+        //TODO:THIS IS AI SLOP TO TEST MY ENCRYPT METHOD
 
-        // check if MAC tag is included
+        // Read hex string from file (with spaces)
+        String hexString;
+        try {
+            hexString = Files.readString(inFile.toPath());
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to read input file for decryption", e);
+        }
 
-        return null;
+        // Remove all whitespace from hex string
+        hexString = hexString.replaceAll("\\s+", "");
+
+        // Convert hex string to byte array
+        byte[] encryptedData = hexStringToByteArray(hexString);
+
+        final int NONCE_LENGTH = 16;
+        final int MAC_LENGTH = 32;
+
+        if (encryptedData.length < NONCE_LENGTH + MAC_LENGTH) {
+            throw new IllegalArgumentException("Input data too short");
+        }
+
+        byte[] nonce = Arrays.copyOfRange(encryptedData, 0, NONCE_LENGTH);
+        byte[] mac = Arrays.copyOfRange(encryptedData, encryptedData.length - MAC_LENGTH, encryptedData.length);
+        byte[] ciphertext = Arrays.copyOfRange(encryptedData, NONCE_LENGTH, encryptedData.length - MAC_LENGTH);
+
+        // Derive key from passPhrase (SHAKE-128, 128 bits)
+        byte[] key = SHA3SHAKE.SHAKE(128, passPhrase.getBytes(StandardCharsets.UTF_8), 16, null);
+
+        // Verify MAC = SHA3-256(key || ciphertext)
+        byte[] macInput = new byte[key.length + ciphertext.length];
+        System.arraycopy(key, 0, macInput, 0, key.length);
+        System.arraycopy(ciphertext, 0, macInput, key.length, ciphertext.length);
+        byte[] macComputed = SHA3SHAKE.SHA3(256, macInput, null);
+
+        if (!Arrays.equals(mac, macComputed)) {
+            throw new SecurityException("MAC verification failed");
+        }
+
+        // Generate keystream same way as encryption (SHAKE-128 absorbs nonce then key)
+        SHA3SHAKE shake = new SHA3SHAKE();
+        shake.init(128);
+        shake.absorb(nonce);
+        shake.absorb(key);
+        byte[] keystream = shake.squeeze(ciphertext.length);
+
+        // XOR ciphertext with keystream to get plaintext
+        byte[] plaintext = new byte[ciphertext.length];
+        for (int i = 0; i < ciphertext.length; i++) {
+            plaintext[i] = (byte) (ciphertext[i] ^ keystream[i]);
+        }
+
+        return plaintext;
     }
+
+    // Helper to convert hex string to byte array
+    public static byte[] hexStringToByteArray(String s) {
+        int len = s.length();
+        if (len % 2 != 0) {
+            throw new IllegalArgumentException("Hex string must have even length");
+        }
+        byte[] data = new byte[len / 2];
+        for (int i = 0; i < len; i += 2) {
+            data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
+                    + Character.digit(s.charAt(i + 1), 16));
+        }
+        return data;
+    }
+
+    //TODO:TEST METHOD
+    //I was using this to read what was happening to debug things
+    private static String bytesToHex(byte[] bytes) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < bytes.length; i++) {
+            sb.append(String.format("%02x", bytes[i]));
+            if ((i + 1) % 8 == 0) sb.append(" ");
+        }
+        return sb.toString();
+    }
+
 }
