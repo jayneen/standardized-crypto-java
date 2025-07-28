@@ -27,9 +27,6 @@ public class Main {
             if (args.length > 2)
                 passphrase = args[2];
 
-            byte[] fileBinary;
-            byte[] passBinary;
-
             try {
                 // Select program mode or quit
                 String userMode = null;
@@ -47,32 +44,28 @@ public class Main {
                     break;
                 }
 
-                // Convert to bytes and print file and pass phrase sizes
-                userInput = validateInputFile(input, userInput);
-                File inputFile = new File(userInput);
-                fileBinary = Files.readAllBytes(Paths.get(userInput));
-                System.out.print("Input file size: ");
-                fileSize(fileBinary);
-
-                passphrase = validatePassphrase(input, passphrase);
-                passBinary = passphrase.getBytes(StandardCharsets.UTF_8);
-                System.out.print("Pass phrase size: ");
-                fileSize(passBinary);
-
-                // Apply mode
+                // Apply mode and validate required inputs
+                File inputFile = null;
                 byte[][] result;
                 switch (userMode) {
                     case "1":
+                        inputFile = new File(validateInputFile(input, userInput));
                         result = hashMode(inputFile);
                         break;
                     case "2":
+                        if (userInput != null) inputFile = new File(validateInputFile(input, userInput));
+                        passphrase = validatePassphrase(input, passphrase);
                         result = tagMode(inputFile, passphrase);
                         break;
                     case "3":
+                        inputFile = new File(validateInputFile(input, userInput));
+                        passphrase = validatePassphrase(input, passphrase);
                         result = new byte[1][];
                         result[0] = encryptMode(inputFile, passphrase);
                         break;
                     case "4":
+                        inputFile = new File(validateInputFile(input, userInput));
+                        passphrase = validatePassphrase(input, passphrase);
                         result = new byte[1][];
                         result[0] = decryptMode(inputFile, passphrase);
                         break;
@@ -101,13 +94,14 @@ public class Main {
                 if (userOutput == null) {
                     // Creating a new default file recursively
                     finalDocument = checkFile(new File("EncryptedFile.txt"));
-                    // Files.writeString(finalDocument.toPath(), output + "\n", StandardOpenOption.APPEND);
+                    // Files.writeString(finalDocument.toPath(), output + "\n",
+                    // StandardOpenOption.APPEND);
                 } else {
                     // Create or overwrite specified file
                     finalDocument = new File(userOutput);
                     // Files.writeString(finalDocument.toPath(), output, StandardOpenOption.CREATE);
                 }
-                for(int i = 0; i < result.length; i++){
+                for (int i = 0; i < result.length; i++) {
                     convertToHexAndWrite(finalDocument, result[i]);
                 }
                 System.out.println("Wrote to " + finalDocument.getName() + "\n");
@@ -143,6 +137,13 @@ public class Main {
                         This is an invalid file path or the file is unable to convert to binary!
                         Please try again!
                         """);
+                // avoid softlock due to bad command line input
+                if(args.length > 0){
+                    System.out.println("""
+                        Ending due to invalid command line file paths.
+                        """);
+                    return;
+                };
             }
         }
     }
@@ -253,7 +254,7 @@ public class Main {
     }
 
     /**
-     * Prompts the user for a pass phrase if null.
+     * Prompts the user for a pass phrase if null and prints its size.
      * 
      * @param input      scanner
      * @param passphrase current passphrase
@@ -263,20 +264,28 @@ public class Main {
             System.out.println("Please enter a passphrase: ");
             passphrase = input.nextLine();
         }
+
+        System.out.print("Pass phrase size: ");
+        fileSize(passphrase.getBytes(StandardCharsets.UTF_8));
+
         return passphrase;
     }
 
     /**
-     * Prompts the user for an input file if null.
+     * Prompts the user for an input file if null and prints its size.
      * 
      * @param input     scanner
      * @param inputFile current input file path
      */
-    public static String validateInputFile(Scanner input, String inputFile) {
+    public static String validateInputFile(Scanner input, String inputFile) throws IOException {
         while (inputFile == null) {
             System.out.println("Please enter an input file path: ");
             inputFile = input.nextLine();
         }
+
+        System.out.print("Input file size: ");
+        fileSize(Files.readAllBytes(Paths.get(inputFile)));
+
         return inputFile;
     }
 
