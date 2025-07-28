@@ -195,62 +195,109 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
      * @return The modified message with the added padding.
      */
     private static byte[] PADDING(byte[] theState, final int theDomainCode, final int MY_RATE) {
-        byte[] temp;
+        int rateBytes = MY_RATE / 8; // Get the rate in bytes
 
-        if (theState.length < MY_RATE / 8) {
-            temp = new byte[200];
-            System.arraycopy(theState, 0, temp, 0, theState.length);
+        // Case 1: Message is shorter than one full rate block
+        if (theState.length < rateBytes) {
+            // Create a buffer for the current message bytes + padding to fill the rate block
+            byte[] paddedBlock = new byte[rateBytes]; // <--- CORRECTED: Size should be rateBytes
 
-            //adds 00000110 to the end of the theState message (domain)
-            temp[theState.length] = (byte) theDomainCode;
+            System.arraycopy(theState, 0, paddedBlock, 0, theState.length); // Copy original message bytes
 
-            // adds 10000000 to the end of the temp array (padding)
-            temp[(MY_RATE / 8) - 1] |= (byte) 0x80;
+            paddedBlock[theState.length] = (byte) theDomainCode; // Append 0x06 (or 0x1F)
 
-            // set theState as temp
-            theState = temp;
+            paddedBlock[rateBytes - 1] |= (byte) 0x80; // Append 0x80 to the last byte of the rate block
 
-        } else if (theState.length > MY_RATE / 8) {
-            temp = new byte[200];//will hold the last chunk that needs padding
-
-            //The number of complete chunks of size rate (byte)
-            int startPos = theState.length - (theState.length % (MY_RATE / 8));
-            //The number of bytes remaining that's less than the rate (byte)
-            int numOfRemainBytes = theState.length % (MY_RATE / 8);
-
-            System.arraycopy(theState, startPos, temp, 0, numOfRemainBytes);
-
-            //The padding
-            temp[numOfRemainBytes] = (byte) theDomainCode;
-            temp[(MY_RATE / 8) - 1] |= (byte) 0x80;
-
-            // The length of the buffer will be the length of the state + the extra padding
-            // The buffer will combine the padded chunk plus the message.
-            byte[] buffer = new byte[theState.length + (MY_RATE / 8)];
-
-            //Adds content from theState to the buffer.
-            System.arraycopy(theState, 0, buffer, 0, theState.length);
-
-            //Adds the padded content from temp into the buffer
-            System.arraycopy(temp, 0, buffer, startPos, MY_RATE / 8);
-
-            theState = buffer;
-
-        } else {
-            temp = new byte[MY_RATE / 8];
-            temp[0] = (byte) theDomainCode;
-            temp[temp.length - 1] = (byte) 0x80;
-            byte[] buffer = new byte[temp.length + theState.length];
-
-            System.arraycopy(theState, 0, buffer, 0, theState.length);
-            System.arraycopy(temp, 0, buffer, theState.length, temp.length);
-
-            theState = buffer;
-
+            return paddedBlock; // Return this single padded block
         }
+        // Case 2: Message extends beyond full rate blocks, or exactly fills a block
+        else { // This combines your original `else if` and final `else`
+            int numOfRemainBytes = theState.length % rateBytes;
 
-        return theState;
+            // If the message perfectly fills current blocks, we need to append a full new padding block.
+            if (numOfRemainBytes == 0) {
+                numOfRemainBytes = rateBytes; // We'll create a full block of padding
+            }
+
+            // Create a temporary buffer to hold the last partial block + padding
+            byte[] tempPaddingBlock = new byte[rateBytes]; // Always create a full block for padding
+
+            // Copy the remaining bytes from the original message (if any) into the temp padding block
+            System.arraycopy(theState, theState.length - numOfRemainBytes, tempPaddingBlock, 0, numOfRemainBytes);
+
+            tempPaddingBlock[numOfRemainBytes] = (byte) theDomainCode; // Append 0x06 (or 0x1F)
+            tempPaddingBlock[rateBytes - 1] |= (byte) 0x80; // Append 0x80 to the last byte of the rate block
+
+            // Now, combine the original full blocks (if any) with this new padded block
+            // The total length will be original_length_minus_remainder + new_padded_block_length
+            byte[] finalPaddedState = new byte[theState.length - numOfRemainBytes + rateBytes];
+
+            // Copy original full blocks
+            System.arraycopy(theState, 0, finalPaddedState, 0, theState.length - numOfRemainBytes);
+
+            // Copy the newly created padded block
+            System.arraycopy(tempPaddingBlock, 0, finalPaddedState, theState.length - numOfRemainBytes, rateBytes);
+
+            return finalPaddedState;
+        }
     }
+    // private static byte[] PADDING(byte[] theState, final int theDomainCode, final int MY_RATE) {
+    //     byte[] temp;
+
+    //     if (theState.length < MY_RATE / 8) {
+    //         temp = new byte[200];
+    //         System.arraycopy(theState, 0, temp, 0, theState.length);
+
+    //         //adds 00000110 to the end of the theState message (domain)
+    //         temp[theState.length] = (byte) theDomainCode;
+
+    //         // adds 10000000 to the end of the temp array (padding)
+    //         temp[(MY_RATE / 8) - 1] |= (byte) 0x80;
+
+    //         // set theState as temp
+    //         theState = temp;
+
+    //     } else if (theState.length > MY_RATE / 8) {
+    //         temp = new byte[200];//will hold the last chunk that needs padding
+
+    //         //The number of complete chunks of size rate (byte)
+    //         int startPos = theState.length - (theState.length % (MY_RATE / 8));
+    //         //The number of bytes remaining that's less than the rate (byte)
+    //         int numOfRemainBytes = theState.length % (MY_RATE / 8);
+
+    //         System.arraycopy(theState, startPos, temp, 0, numOfRemainBytes);
+
+    //         //The padding
+    //         temp[numOfRemainBytes] = (byte) theDomainCode;
+    //         temp[(MY_RATE / 8) - 1] |= (byte) 0x80;
+
+    //         // The length of the buffer will be the length of the state + the extra padding
+    //         // The buffer will combine the padded chunk plus the message.
+    //         byte[] buffer = new byte[theState.length + (MY_RATE / 8)];
+
+    //         //Adds content from theState to the buffer.
+    //         System.arraycopy(theState, 0, buffer, 0, theState.length);
+
+    //         //Adds the padded content from temp into the buffer
+    //         System.arraycopy(temp, 0, buffer, startPos, MY_RATE / 8);
+
+    //         theState = buffer;
+
+    //     } else {
+    //         temp = new byte[MY_RATE / 8];
+    //         temp[0] = (byte) theDomainCode;
+    //         temp[temp.length - 1] = (byte) 0x80;
+    //         byte[] buffer = new byte[temp.length + theState.length];
+
+    //         System.arraycopy(theState, 0, buffer, 0, theState.length);
+    //         System.arraycopy(temp, 0, buffer, theState.length, temp.length);
+
+    //         theState = buffer;
+
+    //     }
+
+    //     return theState;
+    // }
 
 
     private static byte[] getBytes(byte[] theState, int len, byte[] out,
