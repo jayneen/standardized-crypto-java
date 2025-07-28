@@ -53,7 +53,8 @@ public class Main {
                         result = hashMode(inputFile);
                         break;
                     case "2":
-                        if (userInput != null) inputFile = new File(validateInputFile(input, userInput));
+
+                        inputFile = new File(validateInputFile(input, userInput));
                         passphrase = validatePassphrase(input, passphrase);
                         result = tagMode(inputFile, passphrase);
                         break;
@@ -74,18 +75,12 @@ public class Main {
                         continue; // restart the while loop
                 }
 
-                // temp check to avoid crashes and test file writing
-                // TODO remove
-                if (result == null) {
-                    result = new byte[1][];
-                    System.out.println("No data was returned.\n");
-                    result[0] = "abc".getBytes();
-                }
 
                 // Print post processing size
                 System.out.println("Post processing: ");
                 for (int i = 0; i < result.length; i++) {
                     System.out.println("Output " + (i + 1) + ": ");
+                    assert result[i] != null;
                     fileSize(result[i]);
                 }
 
@@ -101,36 +96,10 @@ public class Main {
                     finalDocument = new File(userOutput);
                     // Files.writeString(finalDocument.toPath(), output, StandardOpenOption.CREATE);
                 }
-                for (int i = 0; i < result.length; i++) {
-                    convertToHexAndWrite(finalDocument, result[i]);
+                for (byte[] bytes : result) {
+                    convertToHexAndWrite(finalDocument, bytes);
                 }
                 System.out.println("Wrote to " + finalDocument.getName() + "\n");
-
-                // old main code
-
-                // System.out.println("\nSHA-3/SHAKE encryption");
-                // System.out.print("Please enter a security level for SHA-3 (224,256,384,512) "
-                // +
-                // "> ");
-                // final int ShaSecLevel = Integer.parseInt(input.nextLine());
-                // System.out.print("\n\nPlease enter a security level for SHAKE (128,256) > ");
-                // final int ShakeSecLevel = Integer.parseInt(input.nextLine());
-
-                // // outputting the sample document binary file.
-                // final byte[] docSample = new byte[10];
-                // System.arraycopy(fileBinary, 0, docSample, 0, docSample.length);
-                // System.out.println("Previous file Hash: " + Arrays.toString(docSample));
-
-                // // calling SHA3/SHAKE
-                // passBinary = SHA3SHAKE.SHAKE(ShakeSecLevel, passBinary, ShaSecLevel,
-                // null);
-                // fileBinary = SHA3SHAKE.SHA3(ShaSecLevel, fileBinary, null);
-
-                // // Outputting sample size Hashed document
-                // final byte[] encryptedFile = encryptFile(passBinary, fileBinary);
-                // System.arraycopy(encryptedFile, 0, docSample, 0, docSample.length);
-                // System.out.println("Post Encrypted: " + Arrays.toString(docSample));
-                // fileSize(encryptedFile);
 
             } catch (InvalidPathException | IOException invalidPathException) {
                 System.out.println("""
@@ -138,12 +107,13 @@ public class Main {
                         Please try again!
                         """);
                 // avoid softlock due to bad command line input
-                if(args.length > 0){
+                if (args.length > 0) {
                     System.out.println("""
-                        Ending due to invalid command line file paths.
-                        """);
+                            Ending due to invalid command line file paths.
+                            """);
                     return;
-                };
+                }
+                ;
             }
         }
     }
@@ -210,7 +180,7 @@ public class Main {
      * @return the users encrypted hashed document.
      */
     private static byte[] encryptFile(final byte[] theHashedPassPhrase,
-            final byte[] theHashedDocument) {
+                                      final byte[] theHashedDocument) {
 
         if (theHashedDocument.length != theHashedPassPhrase.length) {
             throw new InvalidParameterException("The hash for the passphrase and the hash " +
@@ -228,7 +198,7 @@ public class Main {
     }
 
     public static void convertToHexAndWrite(final File theFile,
-            final byte[] theEncryptedFile) {
+                                            final byte[] theEncryptedFile) {
         final StringBuilder sb = new StringBuilder(theEncryptedFile.length * 2);
 
         for (byte theFileByte : theEncryptedFile) {
@@ -255,7 +225,7 @@ public class Main {
 
     /**
      * Prompts the user for a pass phrase if null and prints its size.
-     * 
+     *
      * @param input      scanner
      * @param passphrase current passphrase
      */
@@ -273,7 +243,7 @@ public class Main {
 
     /**
      * Prompts the user for an input file if null and prints its size.
-     * 
+     *
      * @param input     scanner
      * @param inputFile current input file path
      */
@@ -331,7 +301,7 @@ public class Main {
             System.out.println("Unable to convert the file into a binary.");
         }
 
-        return new byte[][] { sha256, sha224, sha384, sha512 };
+        return new byte[][]{sha256, sha224, sha384, sha512};
     }
 
     /**
@@ -352,48 +322,31 @@ public class Main {
         byte[] kMac = new byte[0];
         int len = 0;
 
-        if (inFile == null) {
 
-            System.out.print("\n\nPlease enter a message: > ");
-            String message = input.nextLine();
+        try {
 
             System.out.print("\n\nPlease designate the length of your MACs tag > ");
 
             len = Integer.parseInt(String.valueOf(input.nextLine()));
 
-            byte[] msgByte = message.getBytes(StandardCharsets.UTF_8);
+            byte[] theFile = Files.readAllBytes(inFile.toPath());
             byte[] thePass = passPhrase.getBytes(StandardCharsets.UTF_8);
-            kMac = new byte[thePass.length + msgByte.length];
+            kMac = new byte[theFile.length + thePass.length];
 
             System.arraycopy(thePass, 0, kMac, 0, thePass.length);
-            System.arraycopy(msgByte, 0, kMac, thePass.length, msgByte.length);
+            System.arraycopy(theFile, 0, kMac, thePass.length, theFile.length);
 
-        } else {
+        } catch (final IOException exception) {
 
-            try {
+            System.out.println("\nUnable to convert the file into a binary.");
 
-                System.out.print("\n\nPlease designate the length of your MACs tag > ");
+        } catch (final NumberFormatException nfe) {
 
-                len = Integer.parseInt(String.valueOf(input.nextLine()));
+            System.out.println("\nThe length provided is invalid. Please try again.\n\n");
+            tagMode(inFile, passPhrase);
 
-                byte[] theFile = Files.readAllBytes(inFile.toPath());
-                byte[] thePass = passPhrase.getBytes(StandardCharsets.UTF_8);
-                kMac = new byte[theFile.length + thePass.length];
-
-                System.arraycopy(thePass, 0, kMac, 0, thePass.length);
-                System.arraycopy(theFile, 0, kMac, thePass.length, theFile.length);
-
-            } catch (final IOException exception) {
-
-                System.out.println("\nUnable to convert the file into a binary.");
-
-            } catch (final NumberFormatException nfe) {
-
-                System.out.println("\nThe length provided is invalid. Please try again.\n\n");
-                tagMode(inFile, passPhrase);
-
-            }
         }
+
 
         if (kMac.length == 0 || len == 0) {
             throw new InvalidParameterException("The length must be greater than 0!");
@@ -412,8 +365,10 @@ public class Main {
 
         System.out.println(result);
 
-        return new byte[][] { shake128, shake256 };
+        return new byte[][]{shake128, shake256};
     }
+
+
 
     /**
      * Handles the third task of ecnrypting a user specified file under
