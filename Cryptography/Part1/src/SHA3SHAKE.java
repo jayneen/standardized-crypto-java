@@ -1,15 +1,16 @@
-import java.io.File;
-import java.nio.charset.StandardCharsets;
-import java.security.InvalidParameterException;
-import java.util.Arrays;
-
 /**
  * Assignment 1
  * part: 1
+ * 
+ * This is an implementation of a cryptographic sponge used in SHA-3 and SHAKE algorithms
+ * that utilizes Keccak permutations to encrypt data, compute hashes, and generate tags.
  *
  * @author Kassie Whitney, Zane Swaims, Evgeniia Nemynova
- * @version 7.19.25
+ * @version 7.29.25
  */
+
+import java.security.InvalidParameterException;
+
 
 public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
 
@@ -200,7 +201,7 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
         // Case 1: Message is shorter than one full rate block
         if (theState.length < rateBytes) {
             // Create a buffer for the current message bytes + padding to fill the rate block
-            byte[] paddedBlock = new byte[rateBytes]; // <--- CORRECTED: Size should be rateBytes
+            byte[] paddedBlock = new byte[rateBytes];
 
             System.arraycopy(theState, 0, paddedBlock, 0, theState.length); // Copy original message bytes
 
@@ -211,7 +212,7 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
             return paddedBlock; // Return this single padded block
         }
         // Case 2: Message extends beyond full rate blocks, or exactly fills a block
-        else { // This combines your original `else if` and final `else`
+        else {
             int numOfRemainBytes = theState.length % rateBytes;
 
             // If the message perfectly fills current blocks, we need to append a full new padding block.
@@ -241,64 +242,6 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
             return finalPaddedState;
         }
     }
-    // private static byte[] PADDING(byte[] theState, final int theDomainCode, final int MY_RATE) {
-    //     byte[] temp;
-
-    //     if (theState.length < MY_RATE / 8) {
-    //         temp = new byte[200];
-    //         System.arraycopy(theState, 0, temp, 0, theState.length);
-
-    //         //adds 00000110 to the end of the theState message (domain)
-    //         temp[theState.length] = (byte) theDomainCode;
-
-    //         // adds 10000000 to the end of the temp array (padding)
-    //         temp[(MY_RATE / 8) - 1] |= (byte) 0x80;
-
-    //         // set theState as temp
-    //         theState = temp;
-
-    //     } else if (theState.length > MY_RATE / 8) {
-    //         temp = new byte[200];//will hold the last chunk that needs padding
-
-    //         //The number of complete chunks of size rate (byte)
-    //         int startPos = theState.length - (theState.length % (MY_RATE / 8));
-    //         //The number of bytes remaining that's less than the rate (byte)
-    //         int numOfRemainBytes = theState.length % (MY_RATE / 8);
-
-    //         System.arraycopy(theState, startPos, temp, 0, numOfRemainBytes);
-
-    //         //The padding
-    //         temp[numOfRemainBytes] = (byte) theDomainCode;
-    //         temp[(MY_RATE / 8) - 1] |= (byte) 0x80;
-
-    //         // The length of the buffer will be the length of the state + the extra padding
-    //         // The buffer will combine the padded chunk plus the message.
-    //         byte[] buffer = new byte[theState.length + (MY_RATE / 8)];
-
-    //         //Adds content from theState to the buffer.
-    //         System.arraycopy(theState, 0, buffer, 0, theState.length);
-
-    //         //Adds the padded content from temp into the buffer
-    //         System.arraycopy(temp, 0, buffer, startPos, MY_RATE / 8);
-
-    //         theState = buffer;
-
-    //     } else {
-    //         temp = new byte[MY_RATE / 8];
-    //         temp[0] = (byte) theDomainCode;
-    //         temp[temp.length - 1] = (byte) 0x80;
-    //         byte[] buffer = new byte[temp.length + theState.length];
-
-    //         System.arraycopy(theState, 0, buffer, 0, theState.length);
-    //         System.arraycopy(temp, 0, buffer, theState.length, temp.length);
-
-    //         theState = buffer;
-
-    //     }
-
-    //     return theState;
-    // }
-
 
     private static byte[] getBytes(byte[] theState, int len, byte[] out,
                                    SHA3SHAKE sha3SHAKE) {

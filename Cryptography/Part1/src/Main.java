@@ -1,3 +1,16 @@
+/**
+ * Assignment 1
+ * part: 1
+ *
+ * This is the main application using the SHA3SHAKE interface to provide four utility
+ * modes: hash computation, tag generation, file encryption, and file decryption.
+ * It accepts optional command line arguments in the order: input file path, output 
+ * file path, and pass phrase. Do not use input files greater than ~2GB.
+ * 
+ * @author Kassie Whitney, Zane Swaims, Evgeniia Nemynova
+ * @version 7.29.25
+ */
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
