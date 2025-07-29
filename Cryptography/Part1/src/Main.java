@@ -29,6 +29,7 @@ public class Main {
     public static void main(String[] args) {
 
         while (true) {
+            isDecrypt = false;
 
             String userInput = null; // file to read from
             String userOutput = null; // file to write to (creates or overwrites)
@@ -228,7 +229,7 @@ public class Main {
         }
 
         try {
-            Files.writeString(theFile.toPath(), formattedHex + "\n", StandardOpenOption.APPEND);
+            Files.writeString(theFile.toPath(), formattedHex + "\n", StandardOpenOption.CREATE);
         } catch (final IOException ioe) {
             System.out.println("Invalid File Path!");
         }
