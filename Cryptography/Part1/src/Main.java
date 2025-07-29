@@ -1,4 +1,3 @@
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -7,12 +6,12 @@ import java.nio.file.InvalidPathException;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.security.InvalidParameterException;
-import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Scanner;
 
 public class Main {
     private static final Scanner input = new Scanner(System.in);
+    private static boolean isDecrypt = false;
 
     public static void main(String[] args) {
 
@@ -32,9 +31,10 @@ public class Main {
             byte[] fileBinary;
             byte[] passBinary;
 
+
             try {
                 // Select program mode or quit
-                String userMode = null;
+                String userMode;
                 System.out.print("""
                         Select an application mode:
                         1 - to compute hashes
@@ -43,15 +43,20 @@ public class Main {
                         4 - to decrypt a file
                         Q - to quit the program
                         """);
+
                 userMode = input.nextLine().replace("\"", "");
                 if (userMode.equalsIgnoreCase("q")) {
                     input.close();
                     break;
                 }
+                if (userMode.equals("4")) {
+                    isDecrypt = true;
+                }
 
                 // Convert to bytes and print file and pass phrase sizes
                 userInput = validateInputFile(input, userInput);
                 File inputFile = new File(userInput);
+
                 fileBinary = Files.readAllBytes(Paths.get(userInput));
                 System.out.print("Input file size: ");
                 fileSize(fileBinary);
@@ -65,9 +70,11 @@ public class Main {
                 byte[][] result;
                 switch (userMode) {
                     case "1":
+
                         result = hashMode(inputFile);
                         break;
                     case "2":
+
                         result = tagMode(inputFile, passphrase);
                         break;
                     case "3":
@@ -83,15 +90,8 @@ public class Main {
                         continue; // restart the while loop
                 }
 
-                // temp check to avoid crashes and test file writing
-                // TODO remove
-                if (result == null) {
-                    result = new byte[1][];
-                    System.out.println("No data was returned.\n");
-                    result[0] = "abc".getBytes();
-                }
 
-                // Print post processing size
+                // Print post-processing size
                 System.out.println("Post processing: ");
                 for (int i = 0; i < result.length; i++) {
                     System.out.println("Output " + (i + 1) + ": ");
@@ -100,45 +100,29 @@ public class Main {
 
                 // Write output
                 final File finalDocument;
-                if (userOutput == null) {
+                if (userOutput == null && !isDecrypt) {
                     // Creating a new default file recursively
                     finalDocument = checkFile(new File("EncryptedFile.txt"));
-                    // Files.writeString(finalDocument.toPath(), output + "\n", StandardOpenOption.APPEND);
+
+                } else if (isDecrypt) {
+                    finalDocument = checkFile(new File("DecryptedFile.txt"));
+
                 } else {
                     // Create or overwrite specified file
+
                     finalDocument = new File(userOutput);
-                    // Files.writeString(finalDocument.toPath(), output, StandardOpenOption.CREATE);
                 }
-                for(int i = 0; i < result.length; i++){
-                    convertToHexAndWrite(finalDocument, result[i]);
+                if (isDecrypt) {
+                    String plaintext = new String(result[0], StandardCharsets.UTF_8);
+                    Files.writeString(finalDocument.toPath(), plaintext);
+                    System.out.println("Decrypted plaintext written to: " + finalDocument.getName() + "\n");
+                } else {
+                    for (byte[] bytes : result) {
+                        convertToHexAndWrite(finalDocument, bytes);
+                    }
                 }
                 System.out.println("Wrote to " + finalDocument.getName() + "\n");
 
-                // old main code
-
-                // System.out.println("\nSHA-3/SHAKE encryption");
-                // System.out.print("Please enter a security level for SHA-3 (224,256,384,512) "
-                // +
-                // "> ");
-                // final int ShaSecLevel = Integer.parseInt(input.nextLine());
-                // System.out.print("\n\nPlease enter a security level for SHAKE (128,256) > ");
-                // final int ShakeSecLevel = Integer.parseInt(input.nextLine());
-
-                // // outputting the sample document binary file.
-                // final byte[] docSample = new byte[10];
-                // System.arraycopy(fileBinary, 0, docSample, 0, docSample.length);
-                // System.out.println("Previous file Hash: " + Arrays.toString(docSample));
-
-                // // calling SHA3/SHAKE
-                // passBinary = SHA3SHAKE.SHAKE(ShakeSecLevel, passBinary, ShaSecLevel,
-                // null);
-                // fileBinary = SHA3SHAKE.SHA3(ShaSecLevel, fileBinary, null);
-
-                // // Outputting sample size Hashed document
-                // final byte[] encryptedFile = encryptFile(passBinary, fileBinary);
-                // System.arraycopy(encryptedFile, 0, docSample, 0, docSample.length);
-                // System.out.println("Post Encrypted: " + Arrays.toString(docSample));
-                // fileSize(encryptedFile);
 
             } catch (InvalidPathException | IOException invalidPathException) {
                 System.out.println("""
@@ -147,6 +131,7 @@ public class Main {
                         """);
             }
         }
+
     }
 
     /**
@@ -190,10 +175,18 @@ public class Main {
      */
     private static File checkFile(File theFile, int counter) {
         try {
-            if (!theFile.createNewFile()) {
-                theFile = new File("EncryptedFile-" + counter + ".txt");
-                counter++;
-                return checkFile(theFile, counter);
+            if (isDecrypt) {
+                if (!theFile.createNewFile()) {
+                    theFile = new File("DecryptedFile-" + counter + ".txt");
+                    counter++;
+                    return checkFile(theFile, counter);
+                }
+            } else {
+                if (!theFile.createNewFile()) {
+                    theFile = new File("EncryptedFile-" + counter + ".txt");
+                    counter++;
+                    return checkFile(theFile, counter);
+                }
             }
         } catch (IOException ioException) {
             System.out.println("Unable to create new file!");
@@ -201,32 +194,6 @@ public class Main {
         return theFile;
     }
 
-    /**
-     * XOR's the hashed passphrase and the hashed document to encrypt the document.
-     *
-     * @param theHashedPassPhrase the user chosen passphrase *Hash length must equal
-     *                            to the
-     *                            document hash length!
-     * @param theHashedDocument   the hashed users document from the provided path.
-     * @return the users encrypted hashed document.
-     */
-    private static byte[] encryptFile(final byte[] theHashedPassPhrase,
-                                      final byte[] theHashedDocument) {
-
-        if (theHashedDocument.length != theHashedPassPhrase.length) {
-            throw new InvalidParameterException("The hash for the passphrase and the hash " +
-                    "for the document must be the same size!");
-        }
-
-        final byte[] encryptedMessage = new byte[theHashedDocument.length];
-
-        for (int i = 0; i < theHashedDocument.length; i++) {
-
-            encryptedMessage[i] = (byte) (theHashedPassPhrase[i] ^ theHashedDocument[i]);
-        }
-
-        return encryptedMessage;
-    }
 
     public static void convertToHexAndWrite(final File theFile,
                                             final byte[] theEncryptedFile) {
@@ -248,7 +215,7 @@ public class Main {
         }
 
         try {
-            Files.writeString(theFile.toPath(), formattedHex.toString() + "\n", StandardOpenOption.APPEND);
+            Files.writeString(theFile.toPath(), formattedHex + "\n", StandardOpenOption.APPEND);
         } catch (final IOException ioe) {
             System.out.println("Invalid File Path!");
         }
@@ -324,7 +291,7 @@ public class Main {
             System.out.println("Unable to convert the file into a binary.");
         }
 
-        return new byte[][] { sha256, sha224, sha384, sha512 };
+        return new byte[][]{sha256, sha224, sha384, sha512};
     }
 
     /**
@@ -405,7 +372,7 @@ public class Main {
 
         System.out.println(result);
 
-        return new byte[][] { shake128, shake256 };
+        return new byte[][]{shake128, shake256};
     }
 
     /**
@@ -420,12 +387,11 @@ public class Main {
      * @param passPhrase user specified pass phrase
      * @return the cryptogram (nonce || cyphertext || MAC)
      */
-    public static byte[] encryptMode(File inFile, String passPhrase) throws IOException
-    {
+    public static byte[] encryptMode(File inFile, String passPhrase) throws IOException {
         //I am throwing an exception because of this, I chose this as the way to handle it
-        //instead of making a new method and being complicated. The upside is this is easy
+        //instead of making a new method and being complicated. The upside is this is easy,
         //the downside is I load the entire file into memory at once and thus cant handle
-        //more than the JVMs memory. If there is a OUTOFMEMORY error, it is from this.
+        //more than the JVMs memory. If there is an OUT_OF_MEMORY error, it is from this.
         byte[] fileBytes = Files.readAllBytes(inFile.toPath());
 
         //1) hashing the pass phrase with SHAKE-128 as the key
@@ -472,9 +438,10 @@ public class Main {
      * @return decrypted message
      */
     public static byte[] decryptMode(File inFile, String passPhrase) {
-        //TODO:THIS IS AI SLOP TO TEST MY ENCRYPT METHOD
 
         // Read hex string from file (with spaces)
+
+        byte[] plaintext = new byte[0];
         String hexString;
         try {
             hexString = Files.readString(inFile.toPath());
@@ -509,20 +476,21 @@ public class Main {
         byte[] macComputed = SHA3SHAKE.SHA3(256, macInput, null);
 
         if (!Arrays.equals(mac, macComputed)) {
-            throw new SecurityException("MAC verification failed");
-        }
+            throw new InvalidParameterException("***!Incorrect password!***");
+        } else {
 
-        // Generate keystream same way as encryption (SHAKE-128 absorbs nonce then key)
-        SHA3SHAKE shake = new SHA3SHAKE();
-        shake.init(128);
-        shake.absorb(nonce);
-        shake.absorb(key);
-        byte[] keystream = shake.squeeze(ciphertext.length);
+            // Generate keystream the same way as encryption (SHAKE-128 absorbs nonce then key)
+            SHA3SHAKE shake = new SHA3SHAKE();
+            shake.init(128);
+            shake.absorb(nonce);
+            shake.absorb(key);
+            byte[] keystream = shake.squeeze(ciphertext.length);
 
-        // XOR ciphertext with keystream to get plaintext
-        byte[] plaintext = new byte[ciphertext.length];
-        for (int i = 0; i < ciphertext.length; i++) {
-            plaintext[i] = (byte) (ciphertext[i] ^ keystream[i]);
+            // XOR ciphertext with keystream to get plaintext
+            plaintext = new byte[ciphertext.length];
+            for (int i = 0; i < ciphertext.length; i++) {
+                plaintext[i] = (byte) (ciphertext[i] ^ keystream[i]);
+            }
         }
 
         return plaintext;
@@ -540,17 +508,6 @@ public class Main {
                     + Character.digit(s.charAt(i + 1), 16));
         }
         return data;
-    }
-
-    //TODO:TEST METHOD
-    //I was using this to read what was happening to debug things
-    private static String bytesToHex(byte[] bytes) {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < bytes.length; i++) {
-            sb.append(String.format("%02x", bytes[i]));
-            if ((i + 1) % 8 == 0) sb.append(" ");
-        }
-        return sb.toString();
     }
 
 }
