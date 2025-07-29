@@ -19,6 +19,7 @@ import java.nio.file.InvalidPathException;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.security.InvalidParameterException;
+import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Scanner;
 
@@ -412,6 +413,8 @@ public class Main {
 
         //2) obtaining a random 128-bit nonce
         byte[] nonce = new byte[16];
+        SecureRandom secureRandom = new SecureRandom();
+        secureRandom.nextBytes(nonce);
 
         //3) hashing the nonce and the key using SHAKE-128 as a stream cipher (nonce + key)
         SHA3SHAKE shake = new SHA3SHAKE();
