@@ -66,7 +66,7 @@ public class Main {
 
                 // Apply mode
                 File inputFile = null;
-                byte[][] result;
+                byte[] result;
                 switch (userMode) {
                     case "1":
                         inputFile = new File(validateInputFile(input, userInput));
@@ -81,14 +81,12 @@ public class Main {
                     case "3":
                         inputFile = new File(validateInputFile(input, userInput));
                         passphrase = validatePassphrase(input, passphrase);
-                        result = new byte[1][];
-                        result[0] = encryptMode(inputFile, passphrase);
+                        result = encryptMode(inputFile, passphrase);
                         break;
                     case "4":
                         inputFile = new File(validateInputFile(input, userInput));
                         passphrase = validatePassphrase(input, passphrase);
-                        result = new byte[1][];
-                        result[0] = decryptMode(inputFile, passphrase);
+                        result = decryptMode(inputFile, passphrase);
                         break;
                     default:
                         System.out.println("Invalid mode entered. Please select a valid mode.\n");
@@ -96,11 +94,8 @@ public class Main {
                 }
 
                 // Print post-processing size
-                System.out.println("Post processing: ");
-                for (int i = 0; i < result.length; i++) {
-                    System.out.println("Output " + (i + 1) + ": ");
-                    fileSize(result[i]);
-                }
+                System.out.print("Post processing: ");
+                fileSize(result);
 
                 // Write output
                 final File finalDocument;
@@ -117,17 +112,16 @@ public class Main {
                     finalDocument = new File(userOutput);
                 }
                 if (isDecrypt) {
-                    String plaintext = new String(result[0], StandardCharsets.UTF_8);
+                    String plaintext = new String(result, StandardCharsets.UTF_8);
                     Files.writeString(finalDocument.toPath(), plaintext);
                     System.out.println("Decrypted plaintext written to: " + finalDocument.getName() + "\n");
                 } else {
-                    for (byte[] bytes : result) {
-                        convertToHexAndWrite(finalDocument, bytes);
-                    }
+                    convertToHexAndWrite(finalDocument, result);
                 }
                 System.out.println("Wrote to " + finalDocument.getName() + "\n");
 
-            } catch (InvalidParameterException | InvalidPathException | IOException invalidPathException) {
+            } catch (NumberFormatException | InvalidParameterException | 
+            InvalidPathException | IOException invalidPathException) {
                 System.out.println("""
                         Invalid file path, contents, or pass phrase.
                         Please try again!
@@ -138,7 +132,8 @@ public class Main {
                             Ending due to invalid command line file paths.
                             """);
                     return;
-                };
+                }
+                ;
             }
         }
 
@@ -258,7 +253,7 @@ public class Main {
             System.out.println("Please enter an input file path: ");
             inputFile = input.nextLine();
         }
-        if(!Files.exists(new File(inputFile).toPath())){
+        if (!Files.exists(new File(inputFile).toPath())) {
             throw new IOException();
         }
 
@@ -275,40 +270,50 @@ public class Main {
      * @param inFile user specified input file
      * @return all computed hashes
      */
-    public static byte[][] hashMode(File inFile) {
+    public static byte[] hashMode(File inFile) {
 
-        // call all 4 hashes or prompt for just 1 at a time
+        // prompt for security level and verify with a cursed while loop
+        int ShaSecLevel = 0;
+        while (true) {
+            System.out.print("Please enter a security level for SHA-3 (224, 256, 384, 512) > ");
+            ShaSecLevel = Integer.parseInt(input.nextLine());
+            if (!(ShaSecLevel == 224 || ShaSecLevel == 256 || ShaSecLevel == 384 || ShaSecLevel == 512)) {
+                System.out.println("Invalid security level entered.");
+            } else {
+                break;
+            }
+        }
 
-        System.out.println("Computing the SHA-3-256, SHA-3-512, SHA-3-224, and SHA-3-384...");
+        System.out.println("Computing a SHA-3-" + ShaSecLevel + " hash...");
 
-        StringBuilder result = new StringBuilder();
-        byte[] sha256 = new byte[0];
-        byte[] sha224 = new byte[0];
-        byte[] sha384 = new byte[0];
-        byte[] sha512 = new byte[0];
-
+        byte[] sha = new byte[0];
         try {
+            switch (ShaSecLevel) {
+                case 224:
+                    sha = SHA3SHAKE.SHA3(224, Files.readAllBytes(inFile.toPath()),
+                            null);
+                    break;
+                case 256:
+                    sha = SHA3SHAKE.SHA3(256, Files.readAllBytes(inFile.toPath()),
+                            null);
+                    break;
+                case 384:
+                    sha = SHA3SHAKE.SHA3(384, Files.readAllBytes(inFile.toPath()),
+                            null);
+                    break;
+                case 512:
+                    sha = SHA3SHAKE.SHA3(512, Files.readAllBytes(inFile.toPath()),
+                            null);
+                    break;
+            }
 
-            sha256 = SHA3SHAKE.SHA3(256, Files.readAllBytes(inFile.toPath()),
-                    null);
-            sha512 = SHA3SHAKE.SHA3(512, Files.readAllBytes(inFile.toPath()),
-                    null);
             System.out.println("Outputting...");
-            sha224 = SHA3SHAKE.SHA3(224, Files.readAllBytes(inFile.toPath()),
-                    null);
-            sha384 = SHA3SHAKE.SHA3(384, Files.readAllBytes(inFile.toPath()),
-                    null);
-
-            result.append("SHA-3-256: ").append(Arrays.toString(sha256));
-            result.append("\n\nSHA-3-512: ").append(Arrays.toString(sha512));
-            result.append("\n\nSHA-3-224: ").append(Arrays.toString(sha224));
-            result.append("\n\nSHA-3-384: ").append(Arrays.toString(sha384));
 
         } catch (final IOException ioe) {
             System.out.println("Unable to convert the file into a binary.");
         }
 
-        return new byte[][] { sha256, sha224, sha384, sha512 };
+        return sha;
     }
 
     /**
@@ -322,10 +327,21 @@ public class Main {
      * @param passPhrase user specified pass phrase
      * @return all computed tags
      */
-    public static byte[][] tagMode(File inFile, String passPhrase) {
-        StringBuilder result = new StringBuilder();
-        byte[] shake128;
-        byte[] shake256;
+    public static byte[] tagMode(File inFile, String passPhrase) {
+
+        // prompt for security level and verify
+        int ShakeSecLevel = 0;
+        while (true) {
+            System.out.print("Please enter a security level for SHAKE (128,256) > ");
+            ShakeSecLevel = Integer.parseInt(input.nextLine());
+            if (!(ShakeSecLevel == 128 || ShakeSecLevel == 256)) {
+                System.out.println("Invalid security level entered.");
+            } else {
+                break;
+            }
+        }
+
+        byte[] shake = new byte[0];
         byte[] kMac = new byte[0];
         int len = 0;
 
@@ -349,7 +365,7 @@ public class Main {
 
             try {
 
-                System.out.print("\n\nPlease designate the length of your MACs tag > ");
+                System.out.print("\n\nPlease designate the length of your MAC tag in bits > ");
 
                 len = Integer.parseInt(String.valueOf(input.nextLine()));
 
@@ -376,20 +392,19 @@ public class Main {
             throw new InvalidParameterException("The length must be greater than 0!");
         }
 
-        System.out.println("Computing the SHAKE-128 and SHAKE-256");
-
-        shake128 = SHA3SHAKE.SHAKE(128, kMac, len, null);
+        System.out.println("Computing a SHAKE-" + ShakeSecLevel + " tag...");
+        switch (ShakeSecLevel) {
+            case 128:
+                shake = SHA3SHAKE.SHAKE(128, kMac, len, null);
+                break;
+            case 256:
+                shake = SHA3SHAKE.SHAKE(256, kMac, len, null);
+                break;
+        }
 
         System.out.println("Outputting...");
 
-        shake256 = SHA3SHAKE.SHAKE(256, kMac, len, null);
-
-        result.append("SHAKE-128: ").append(Arrays.toString(shake128));
-        result.append("\n\nSHAKE-256: ").append(Arrays.toString(shake256));
-
-        System.out.println(result);
-
-        return new byte[][] { shake128, shake256 };
+        return shake;
     }
 
     /**
