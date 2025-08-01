@@ -120,8 +120,8 @@ public class Main {
                 }
                 System.out.println("Wrote to " + finalDocument.getName() + "\n");
 
-            } catch (NumberFormatException | InvalidParameterException | 
-            InvalidPathException | IOException invalidPathException) {
+            } catch (NumberFormatException | InvalidParameterException | InvalidPathException
+                    | IOException invalidPathException) {
                 System.out.println("""
                         Invalid file path, contents, or pass phrase.
                         Please try again!
@@ -356,10 +356,15 @@ public class Main {
 
             byte[] msgByte = message.getBytes(StandardCharsets.UTF_8);
             byte[] thePass = passPhrase.getBytes(StandardCharsets.UTF_8);
-            kMac = new byte[thePass.length + msgByte.length];
+            // kMac = new byte[thePass.length + msgByte.length];
 
+            // System.arraycopy(thePass, 0, kMac, 0, thePass.length);
+            // System.arraycopy(msgByte, 0, kMac, thePass.length, msgByte.length);
+            byte[] tTag = "T".getBytes(StandardCharsets.UTF_8);
+            kMac = new byte[thePass.length + msgByte.length + tTag.length];
             System.arraycopy(thePass, 0, kMac, 0, thePass.length);
             System.arraycopy(msgByte, 0, kMac, thePass.length, msgByte.length);
+            System.arraycopy(tTag, 0, kMac, thePass.length + msgByte.length, tTag.length);
 
         } else {
 
@@ -371,10 +376,15 @@ public class Main {
 
                 byte[] theFile = Files.readAllBytes(inFile.toPath());
                 byte[] thePass = passPhrase.getBytes(StandardCharsets.UTF_8);
-                kMac = new byte[theFile.length + thePass.length];
+                // kMac = new byte[theFile.length + thePass.length];
 
+                // System.arraycopy(thePass, 0, kMac, 0, thePass.length);
+                // System.arraycopy(theFile, 0, kMac, thePass.length, theFile.length);
+                byte[] tTag = "T".getBytes(StandardCharsets.UTF_8);
+                kMac = new byte[thePass.length + theFile.length + tTag.length];
                 System.arraycopy(thePass, 0, kMac, 0, thePass.length);
                 System.arraycopy(theFile, 0, kMac, thePass.length, theFile.length);
+                System.arraycopy(tTag, 0, kMac, thePass.length + theFile.length, tTag.length);
 
             } catch (final IOException exception) {
 
