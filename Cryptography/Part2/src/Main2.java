@@ -19,11 +19,9 @@ import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.StandardOpenOption;
 import java.security.InvalidParameterException;
-import java.security.SecureRandom;
-import java.util.Arrays;
 import java.util.Scanner;
 
-public class Main {
+public class Main2 {
     private static final Scanner input = new Scanner(System.in);
     private static boolean isDecrypt = false;
 

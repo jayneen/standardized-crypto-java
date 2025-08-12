@@ -14,7 +14,7 @@ Provides an implementation of ECIES and Schnorr inspired asymmetric algorithms f
 ## Instructions:
 ### How to Run:
 1) Compile code with: javac *.java
-2) Run with: java Main
+2) Run with: java Main2
 
 ### Command Line Arguments:
 #### Part 1:
