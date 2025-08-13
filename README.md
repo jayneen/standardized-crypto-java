@@ -1,6 +1,6 @@
 # asymmetric-crypto-java
 ## Description: 
-A Java implementation of 128-bit symmetric and asymmetric encryption applications. Symmetric features provide an implementation of several SHA-3 and SHAKE inspired algorithms for hashing, tagging, encrypting, and decrypting. Asymmetric features provide implementations of custom ECIES and Schnorr inspired algorithms for signing, verifying, encrypting, and decrypting.
+A Java implementation of 128-bit symmetric and asymmetric encryption applications. Part 1 provides symmetric cryptographic features based on an implementation of several SHA-3 and SHAKE inspired algorithms for hashing, tagging, encrypting, and decrypting. Part 2 provides additional asymmetric features including custom implementations of ECIES and Schnorr inspired algorithms for signing, verifying, encrypting, and decrypting.
 
 ## Contributors:
 - Kassie Whitney
@@ -9,8 +9,9 @@ A Java implementation of 128-bit symmetric and asymmetric encryption application
 
 ## Instructions:
 ### How to Run:
-1) Compile code with: javac *.java
-2) Run with: java Main (or Main1 for older version)
+1) Navigate to the folder containing the desired source code
+2) Compile with: javac *.java
+3) Run with: java Main (or Main1 for older version)
 
 ### Command Line Arguments:
 The program accepts up to four command line arguments in the order: input file path, output file path, pass phrase, key pair file. 
