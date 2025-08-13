@@ -1,10 +1,10 @@
-
 /**
  * Assignment 1
  * part: 2
- *
- * This is the main application using the ECIES to provide three utility
- * modes: key pair generation, encryption, and decryption.
+ * 
+ * This is the main application using SHA3, SHAKE, ECIES, and Schnorr inspired algorithms
+ * to provide seven utility modes: hash computation, tag generation, symmetric file 
+ * encryption and decryption, key pair generation, and asymmetric encryption and decryption.
  * It accepts optional command line arguments in the order: input file path, output 
  * file path, and pass phrase. Do not use input files greater than ~2GB.
  * 
