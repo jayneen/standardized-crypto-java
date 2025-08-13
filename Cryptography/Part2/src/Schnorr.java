@@ -1,7 +1,7 @@
 import java.math.BigInteger;
 import java.security.SecureRandom;
 
-public class Scnhorr
+public class Schnorr
 {
     //Probably the whole thing
     public void generateKeypair(byte[] theMessage, Edwards theCurve, String thePassphrase)
@@ -12,7 +12,7 @@ public class Scnhorr
 
         //Find private key, s, from passphrase
         SHA3SHAKE shake = new SHA3SHAKE();
-        shake.absorb(passphrase.getBytes());
+        shake.absorb(thePassphrase.getBytes());
         byte[] sBytes = shake.squeeze(32);
         BigInteger s = new BigInteger(1, sBytes).mod(r);
         //TODO
