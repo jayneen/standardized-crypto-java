@@ -118,6 +118,11 @@ public class Edwards {
         return r.multiply(r).subtract(value).mod(p).signum() == 0 ? r : null;
     }
 
+    //getter for schnorr
+    public BigInteger getR() {
+        return r;
+    }
+
     public static class Point {
 
     private final BigInteger x;
@@ -244,6 +249,10 @@ public class Edwards {
         return result;
     }
 
+    //getter for schnorr
+    public BigInteger getX() {
+        return x;
+    }
     /**
      * Display a human-readable representation of this point.
      *
