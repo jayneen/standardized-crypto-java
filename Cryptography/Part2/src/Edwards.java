@@ -129,8 +129,8 @@ public class Edwards {
     final BigInteger y;
     private final boolean isZero;
 
-    private static final BigInteger P = BigInteger.valueOf(2).pow(256).subtract(BigInteger.valueOf(189));
-    private static final BigInteger D = BigInteger.valueOf(15343);
+    // private static final BigInteger P = BigInteger.valueOf(2).pow(256).subtract(BigInteger.valueOf(189));
+    // private static final BigInteger D = BigInteger.valueOf(15343);
 
     /**
      * Create a copy of the neutral element on this curve.
