@@ -1,3 +1,4 @@
+
 /**
  * Assignment 1
  * part: 2
@@ -14,6 +15,7 @@
 
 import java.io.File;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
@@ -93,6 +95,7 @@ public class Main {
                         result = symmetricEncryptMode(inputFile, passphrase);
                         break;
                     case "4":
+                        isDecrypt = true;
                         inputFile = new File(validateInputFile(input, userInput));
                         passphrase = validatePassphrase(input, passphrase);
                         result = symmetricDecryptMode(inputFile, passphrase);
@@ -306,14 +309,13 @@ public class Main {
         fileSize(keyFile.getBytes(StandardCharsets.UTF_8));
 
         return keyFile;
-    }    
+    }
 
     /***************************************************************************/
-    /*******************************  MODES  ***********************************/
+    /******************************* MODES ***********************************/
     /***************************************************************************/
 
-
-    /*******************************  PART 1  **********************************/
+    /******************************* PART 1 **********************************/
     /**
      * Handles the first task of hashing a user specified file
      * using SHA-3-256 and -512 (bonus: -224, 384).
@@ -501,10 +503,14 @@ public class Main {
 
         // 3) hashing the nonce and the key using SHAKE-128 as a stream cipher (nonce +
         // key)
+        // Combine the nonce and key into a single message
+        byte[] combinedData = new byte[nonce.length + key.length];
+        System.arraycopy(nonce, 0, combinedData, 0, nonce.length);
+        System.arraycopy(key, 0, combinedData, nonce.length, key.length);
+
         SHA3SHAKE shake = new SHA3SHAKE();
         shake.init(128);
-        shake.absorb(nonce);
-        shake.absorb(key);
+        shake.absorb(combinedData);
         byte[] keystream = shake.squeeze(fileBytes.length);
 
         // Encrypting, ciphertext = plaintext XOR (step 3)
@@ -582,10 +588,14 @@ public class Main {
 
             // Generate keystream the same way as encryption (SHAKE-128 absorbs nonce then
             // key)
+            // Combine the nonce and key into a single message
+            byte[] combinedData = new byte[nonce.length + key.length];
+            System.arraycopy(nonce, 0, combinedData, 0, nonce.length);
+            System.arraycopy(key, 0, combinedData, nonce.length, key.length);
+
             SHA3SHAKE shake = new SHA3SHAKE();
             shake.init(128);
-            shake.absorb(nonce);
-            shake.absorb(key);
+            shake.absorb(combinedData);
             byte[] keystream = shake.squeeze(ciphertext.length);
 
             // XOR ciphertext with keystream to get plaintext
@@ -598,7 +608,7 @@ public class Main {
         return plaintext;
     }
 
-    /*******************************  PART 2  **********************************/
+    /******************************* PART 2 **********************************/
 
     /**
      * Handles the first task of generating an elliptic key pair
@@ -608,8 +618,33 @@ public class Main {
      * @return generated elliptic key pair
      */
     public static byte[] keyPairMode(String passphrase) {
-        // might need to change to byte[][]?
-        return null;
+        Edwards ed = new Edwards();
+        byte[] absorbedPass = SHA3SHAKE.SHAKE(128,
+                passphrase.getBytes(StandardCharsets.UTF_8), 32 * 8, null);
+
+        // get s mod r
+        BigInteger s = new BigInteger(1, absorbedPass);
+        s = s.mod(ed.getR());
+
+        // compute V = s * G
+        Edwards.Point V = ed.gen().mul(s);
+
+        // remove redundancy
+        if (V.getX().testBit(0)) {
+            s = ed.getR().subtract(s);
+            V = V.negate();
+        }
+
+        byte[] sBytes = toFixedLengthBytes(s, 32);
+        byte[] xBytes = toFixedLengthBytes(V.getX(), 32);
+        byte[] yBytes = toFixedLengthBytes(V.y, 32);
+
+        byte[] keyPair = new byte[96];
+        System.arraycopy(sBytes, 0, keyPair, 0, 32);
+        System.arraycopy(xBytes, 0, keyPair, 32, 32);
+        System.arraycopy(yBytes, 0, keyPair, 64, 32);
+
+        return keyPair;
     }
 
     /**
@@ -649,6 +684,21 @@ public class Main {
                     + Character.digit(s.charAt(i + 1), 16));
         }
         return data;
+    }
+
+    // Helper to convert BigInteger to fixed 32-byte array
+    private static byte[] toFixedLengthBytes(BigInteger value, int length) {
+        byte[] raw = value.toByteArray();
+        byte[] fixed = new byte[length];
+
+        if (raw.length > length) {
+            // Truncate leading zero byte if present
+            System.arraycopy(raw, raw.length - length, fixed, 0, length);
+        } else {
+            System.arraycopy(raw, 0, fixed, length - raw.length, raw.length);
+        }
+
+        return fixed;
     }
 
 }
