@@ -107,7 +107,9 @@ public class Main {
                     case "6":
                         inputFile = new File(validateInputFile(input, userInput));
                         keyFile = new File(validateKeyFile(input, userKey));
-                        result = asymmetricEncryptMode(inputFile, keyFile);
+                        //TODO:updated signirute here
+                        passphrase = validatePassphrase(input, passphrase);
+                        result = asymmetricEncryptMode(inputFile, keyFile, passphrase);
                         break;
                     case "7":
                         isDecrypt = true;
@@ -259,13 +261,12 @@ public class Main {
      * @param passphrase current passphrase
      */
     public static String validatePassphrase(Scanner input, String passphrase) {
-        while (passphrase == null) {
-            System.out.println("Please enter a passphrase: ");
+        while (passphrase == null || passphrase.trim().isEmpty()) {
+            System.out.print("Please enter a passphrase: ");
             passphrase = input.nextLine();
         }
         System.out.print("Pass phrase size: ");
         fileSize(passphrase.getBytes(StandardCharsets.UTF_8));
-
         return passphrase;
     }
 
@@ -294,7 +295,7 @@ public class Main {
      * Prompts the user for an public key file if null and print its size.
      *
      * @param input     scanner
-     * @param inputFile current input file path
+     * @param keyFile current input file path
      */
     public static String validateKeyFile(Scanner input, String keyFile) throws IOException {
         while (keyFile == null || keyFile.equals("")) {
@@ -656,9 +657,78 @@ public class Main {
      * @param keyFile user specified public key containing file
      * @return the cryptogram
      */
-    public static byte[] asymmetricEncryptMode(File inFile, File keyFile) throws IOException {
-        return null;
+    public static byte[] asymmetricEncryptMode(File inFile, File keyFile, String passphrase) throws IOException {
+        Edwards curve = new Edwards();
+
+        // 1. Read key file hex string and remove whitespace (expecting 192 hex chars = 96 bytes)
+        String keyHex = new String(Files.readAllBytes(keyFile.toPath())).replaceAll("\\s", "");
+        byte[] keyBytes = hexStringToByteArray(keyHex);
+
+        if (keyBytes.length != 96) {
+            throw new IllegalArgumentException("Key file must be exactly 96 bytes (3 x 32 bytes).");
+        }
+
+        // 2. Split into y, x, z (each 32 bytes)
+        byte[] yBytes = new byte[32];
+        byte[] xBytes = new byte[32];
+        byte[] zBytes = new byte[32]; // unused here, but preserved
+
+        System.arraycopy(keyBytes, 0, yBytes, 0, 32);
+        System.arraycopy(keyBytes, 32, xBytes, 0, 32);
+        System.arraycopy(keyBytes, 64, zBytes, 0, 32);
+
+        // 3. Convert yBytes to BigInteger y
+        BigInteger y = new BigInteger(1, yBytes);
+
+        // 4. Extract the least significant bit (LSB) of the last byte of xBytes as xLSB
+        boolean xLSB = (xBytes[31] & 1) == 1;
+
+        // 5. Reconstruct public key point from y and xLSB
+        Edwards.Point publicKey = curve.getPoint(y, xLSB);
+        if (publicKey.isZero()) {
+            throw new IllegalArgumentException("Invalid public key point reconstructed.");
+        }
+
+        // 6. Read the input file bytes (message)
+        byte[] message = Files.readAllBytes(inFile.toPath());
+
+        // 7. Generate Schnorr signature with message, curve, and passphrase
+        Schnorr schnorr = new Schnorr();
+        Schnorr.Signature sig = schnorr.generateKeypair(message, curve, passphrase);
+
+        // 8. Serialize signature parts z and h into fixed 32-byte arrays
+        byte[] zBytesSig = toFixedLength(sig.z, 32);
+        byte[] hBytesSig = toFixedLength(sig.h, 32);
+
+        // 9. Concatenate z || h to produce the encrypted output
+        byte[] result = new byte[64];
+        System.arraycopy(zBytesSig, 0, result, 0, 32);
+        System.arraycopy(hBytesSig, 0, result, 32, 32);
+
+        return result;
     }
+
+    // Helper to convert BigInteger to fixed-length byte array (big-endian), left-padded with zeros
+    private static byte[] toFixedLength(BigInteger value, int length) {
+        byte[] raw = value.toByteArray();
+        if (raw.length == length) {
+            return raw;
+        } else if (raw.length > length) {
+            // BigInteger byte array can have leading zero for sign, so trim if needed
+            int start = raw.length - length;
+            byte[] trimmed = new byte[length];
+            System.arraycopy(raw, start, trimmed, 0, length);
+            return trimmed;
+        } else {
+            // pad with leading zeros
+            byte[] padded = new byte[length];
+            System.arraycopy(raw, 0, padded, length - raw.length, raw.length);
+            return padded;
+        }
+    }
+
+
+
 
     /**
      * Combines the decryption and Schnorr verification tasks under
