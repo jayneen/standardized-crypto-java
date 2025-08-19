@@ -107,7 +107,7 @@ public class KECCAK_F {
         }
     }
 
-    //(Depreciated)
+    @Deprecated
     public void update(byte[] input) {
         for (byte b : input) {
             buffer[bufferPos++] ^= b;
@@ -174,7 +174,7 @@ public class KECCAK_F {
         if (input.length != 200)
             throw new IllegalArgumentException("State must be 200 bytes");
 
-        KECCAK_F2 kf = new KECCAK_F2();
+        KECCAK_F kf = new KECCAK_F();
 
         //Load the state from input
         for (int i = 0; i < 25; i++) {

@@ -6,7 +6,7 @@
  * but converted to Java. All credit goes to Saarinen, all we did was adjust it slightly
  * to work properly. Original implementation can be found here:
  *
- * https://github.com/mjosaarinen/tiny_sha3/blob/master/sha3.c
+ * <a href="https://github.com/mjosaarinen/tiny_sha3/blob/master/sha3.c">...</a>
  *
  * @author Markku-Juhani O. Saarinen <mjos@iki.fi>, Kassie Whitney, Zane Swaims, Evgeniia Nemynova
  * @version 7.19.25
@@ -67,7 +67,7 @@ public class KECCAK_F2 {
         return (x << n) | (x >>> (64 - n));
     }
 
-    private void keccakf() {
+    private void keccakf2() {
         long[] bc = new long[5];
         long t;
 
@@ -84,6 +84,7 @@ public class KECCAK_F2 {
                     state[j + i] ^= t;
                 }
             }
+
 
             //Rho and Pi
             t = state[1];
@@ -122,7 +123,7 @@ public class KECCAK_F2 {
         for (int i = 0; i < rate / 8; i++) {
             state[i] ^= toLongLE(buffer, i * 8);
         }
-        keccakf();
+        keccakf2();
     }
 
     /**
@@ -182,7 +183,7 @@ public class KECCAK_F2 {
         }
 
         //Perform permutation
-        kf.keccakf();
+        kf.keccakf2();
 
         //Convert back to byte array
         byte[] output = new byte[200];
