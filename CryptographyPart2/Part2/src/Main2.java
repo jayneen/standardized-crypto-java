@@ -517,7 +517,7 @@ public class Main2 {
         byte[] fileBytes = Files.readAllBytes(inFile.toPath());
 
         // 1) hashing the pass phrase with SHAKE-128 as the key
-        byte[] key = SHA3SHAKE.SHAKE(128, passPhrase.getBytes(StandardCharsets.UTF_8), 16,
+        byte[] key = SHA3SHAKE.SHAKE(128, passPhrase.getBytes(StandardCharsets.UTF_8), 128,
                 null);
 
         // 2) obtaining a random 128-bit nonce
@@ -527,16 +527,14 @@ public class Main2 {
 
         // 3) hashing the nonce and the key using SHAKE-128 as a stream cipher (nonce +
         // key)
-        // Combine the nonce and key into a single message
-        byte[] combinedData = new byte[nonce.length + key.length];
-        System.arraycopy(nonce, 0, combinedData, 0, nonce.length);
-        System.arraycopy(key, 0, combinedData, nonce.length, key.length);
-
         SHA3SHAKE shake = new SHA3SHAKE();
         shake.init(128);
-        shake.absorb(combinedData);
+        shake.absorb(nonce);
+        shake.absorb(key);
+        
         byte[] keystream = shake.squeeze(fileBytes.length);
 
+        System.out.println(Arrays.toString(keystream));
         // Encrypting, ciphertext = plaintext XOR (step 3)
         byte[] ciphertext = new byte[fileBytes.length];
         for (int i = 0; i < fileBytes.length; i++) {
@@ -550,7 +548,7 @@ public class Main2 {
         System.arraycopy(ciphertext, 0, macInput, key.length, ciphertext.length);
         byte[] mac = SHA3SHAKE.SHA3(256, macInput, null);
 
-        // Putting it together, nonce + ciphertext + mac
+        // // Putting it together, nonce + ciphertext + mac
         byte[] output = new byte[nonce.length + ciphertext.length + mac.length];
         System.arraycopy(nonce, 0, output, 0, nonce.length);
         System.arraycopy(ciphertext, 0, output, nonce.length, ciphertext.length);
@@ -598,7 +596,7 @@ public class Main2 {
         byte[] ciphertext = Arrays.copyOfRange(encryptedData, NONCE_LENGTH, encryptedData.length - MAC_LENGTH);
 
         // Derive key from passPhrase (SHAKE-128, 128 bits)
-        byte[] key = SHA3SHAKE.SHAKE(128, passPhrase.getBytes(StandardCharsets.UTF_8), 16,
+        byte[] key = SHA3SHAKE.SHAKE(128, passPhrase.getBytes(StandardCharsets.UTF_8), 128,
                 null);
 
         // Verify MAC = SHA3-256(key || ciphertext)
