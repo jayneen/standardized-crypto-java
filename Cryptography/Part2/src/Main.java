@@ -121,7 +121,8 @@ public class Main {
                         isDecrypt = true;
                         inputFile = new File(validateInputFile(input, userInput));
                         keyFile = new File(validateKeyFile(input, userKey));
-                        result = asymmetricDecryptMode(inputFile, keyFile);
+                        passphrase = validatePassphrase(input, passphrase);
+                        result = asymmetricDecryptMode(inputFile, keyFile, passphrase);
                         break;
                     case "8":
                         inputFile = new File(validateInputFile(input, userInput));
@@ -740,13 +741,14 @@ public class Main {
      *
      * @param inFile  user specified input file
      * @param keyFile user specified public key containing file
+     * @param passphrase user specified pass phrase used to generate the key file
      * @return decrypted message
      */
     @SuppressWarnings("unused")
-    public static byte[] asymmetricDecryptMode(File inFile, File keyFile) {
+    public static byte[] asymmetricDecryptMode(File inFile, File keyFile, String passphrase) {
 
         // 1) Get the passphrase (since case "7" didn't capture it)
-        String passphrase = validatePassphrase(input, null);
+        // String passphrase = validatePassphrase(input, null);
 
         // 2) Read the cryptogram file as hex (bytes → hex with spaces)
         final String hex;
