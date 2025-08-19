@@ -113,7 +113,7 @@ public class Main {
                     case "6":
                         inputFile = new File(validateInputFile(input, userInput));
                         keyFile = new File(validateKeyFile(input, userKey));
-                        //TODO:updated signirute here
+                        // TODO:updated signirute here
                         passphrase = validatePassphrase(input, passphrase);
                         result = asymmetricEncryptMode(inputFile, keyFile, passphrase);
                         break;
@@ -150,7 +150,7 @@ public class Main {
                     // Creating a new default file recursively
                     finalDocument = checkFile(new File("EncryptedFile.txt"));
 
-                } else if (isDecrypt) {
+                } else if (userOutput == null && isDecrypt) {
                     finalDocument = checkFile(new File("DecryptedFile.txt"));
 
                 } else {
@@ -265,7 +265,7 @@ public class Main {
         }
 
         try {
-            Files.writeString(theFile.toPath(), formattedHex + "\n", StandardOpenOption.APPEND);
+            Files.writeString(theFile.toPath(), formattedHex, StandardOpenOption.APPEND);
         } catch (final IOException ioe) {
             System.out.println("Invalid File Path!");
         }
@@ -311,7 +311,7 @@ public class Main {
     /**
      * Prompts the user for an public key file if null and print its size.
      *
-     * @param input     scanner
+     * @param input   scanner
      * @param keyFile current input file path
      */
     public static String validateKeyFile(Scanner input, String keyFile) throws IOException {
@@ -343,11 +343,11 @@ public class Main {
         return sigFile;
     }
 
-    //***************************************************************************/
-    //******************************* MODES ***********************************/
-    //***************************************************************************/
+    // ***************************************************************************/
+    // ******************************* MODES ***********************************/
+    // ***************************************************************************/
 
-    //******************************* PART 1 **********************************/
+    // ******************************* PART 1 **********************************/
     /**
      * Handles the first task of hashing a user specified file
      * using SHA-3-256 and -512 (bonus: -224, 384).
@@ -631,7 +631,8 @@ public class Main {
 
         return plaintext;
     }
-//*********************** PART 2 ********************************
+
+    // *********************** PART 2 ********************************
     /**
      * Handles the first task of generating an elliptic key pair
      * from a given passphrase.
@@ -647,14 +648,14 @@ public class Main {
         s = s.mod(ed.getR());
         Edwards.Point V = ed.gen().mul(s);
         if (V.getX().testBit(0)) {
-            //noinspection UnusedAssignment
+            // noinspection UnusedAssignment
             s = ed.getR().subtract(s);
             V = V.negate();
         }
         byte[] yBytes = toFixedLengthBytes(V.y, 32);
         byte[] out = new byte[33];
         System.arraycopy(yBytes, 0, out, 0, 32);
-        out[32] = (byte)(V.getX().testBit(0) ? 1 : 0);
+        out[32] = (byte) (V.getX().testBit(0) ? 1 : 0);
         return out;
     }
 
@@ -695,13 +696,14 @@ public class Main {
         byte[] k_e = Arrays.copyOfRange(kk, 32, 64);
         byte[] keystream = SHA3SHAKE2.SHAKE(128, k_e, m.length * 8, null);
         byte[] c = new byte[m.length];
-        for (int i = 0; i < m.length; i++) c[i] = (byte)(m[i] ^ keystream[i]);
+        for (int i = 0; i < m.length; i++)
+            c[i] = (byte) (m[i] ^ keystream[i]);
         byte[] macInput = new byte[k_a.length + c.length];
         System.arraycopy(k_a, 0, macInput, 0, k_a.length);
         System.arraycopy(c, 0, macInput, k_a.length, c.length);
         byte[] t = SHA3SHAKE2.SHA3(256, macInput, null);
         byte[] yZ = toFixedLength(Z.y, 32);
-        byte xlsbZ = (byte)(Z.getX().testBit(0) ? 1 : 0);
+        byte xlsbZ = (byte) (Z.getX().testBit(0) ? 1 : 0);
         ByteBuffer bb = ByteBuffer.allocate(32 + 1 + 4 + c.length + 32).order(ByteOrder.BIG_ENDIAN);
         bb.put(yZ);
         bb.put(xlsbZ);
@@ -711,7 +713,8 @@ public class Main {
         return bb.array();
     }
 
-    // Helper to convert BigInteger to fixed-length byte array (big-endian), left-padded with zeros
+    // Helper to convert BigInteger to fixed-length byte array (big-endian),
+    // left-padded with zeros
     @SuppressWarnings("SameParameterValue")
     private static byte[] toFixedLength(BigInteger value, int length) {
         byte[] raw = value.toByteArray();
@@ -731,9 +734,6 @@ public class Main {
         }
     }
 
-
-
-
     /**
      * Combines the decryption and Schnorr verification tasks under
      * a provided public key.
@@ -745,81 +745,88 @@ public class Main {
     @SuppressWarnings("unused")
     public static byte[] asymmetricDecryptMode(File inFile, File keyFile) {
 
-    // 1) Get the passphrase (since case "7" didn't capture it)
-    String passphrase = validatePassphrase(input, null);
+        // 1) Get the passphrase (since case "7" didn't capture it)
+        String passphrase = validatePassphrase(input, null);
 
-    // 2) Read the cryptogram file as hex (your app writes bytes → hex with spaces)
-    final String hex;
-    try {
-        hex = Files.readString(inFile.toPath()).replaceAll("\\s+", "");
-    } catch (IOException e) {
-        throw new RuntimeException("Failed to read input file", e);
+        // 2) Read the cryptogram file as hex (bytes → hex with spaces)
+        final String hex;
+        try {
+            hex = Files.readString(inFile.toPath()).replaceAll("\\s+", "");
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to read input file", e);
+        }
+        final byte[] blob = hexStringToByteArray(hex);
+
+        // Expected wire format (clean, self-delimiting):
+        // 32B y(Z) big-endian, unsigned
+        // 1B xLSB(Z) (0x00 or 0x01)
+        // 4B cLen (big-endian)
+        // cLen bytes c
+        // 32B t = SHA3-256(k_a || c)
+        if (blob.length < 32 + 1 + 4 + 32) {
+            throw new InvalidParameterException("Cipher blob too short.");
+        }
+        int idx = 0;
+        byte[] yZbytes = Arrays.copyOfRange(blob, idx, idx + 32);
+        idx += 32;
+        boolean xLsbZ = blob[idx++] != 0;
+        int cLen = ByteBuffer.wrap(blob, idx, 4).order(ByteOrder.BIG_ENDIAN).getInt();
+        idx += 4;
+        if (cLen < 0 || blob.length != 32 + 1 + 4 + cLen + 32) {
+            throw new InvalidParameterException("Malformed ciphertext length.");
+        }
+        byte[] c = Arrays.copyOfRange(blob, idx, idx + cLen);
+        idx += cLen;
+        byte[] t = Arrays.copyOfRange(blob, idx, idx + 32);
+
+        // 3) Derive private key s from passphrase (SHAKE-128 → 32B → mod r) and enforce
+        // xLSB(V)==0
+        Edwards E = new Edwards();
+        BigInteger r = E.getR();
+
+        byte[] sBytesRaw = SHA3SHAKE2.SHAKE(128, passphrase.getBytes(StandardCharsets.UTF_8), 256, null);
+        BigInteger s = new BigInteger(1, sBytesRaw).mod(r);
+
+        Edwards.Point G = E.gen();
+        Edwards.Point V = G.mul(s);
+        if (V.getX().testBit(0)) { // if LSB(x(V)) == 1
+            s = r.subtract(s); // s ← r − s
+            // noinspection UnusedAssignment
+            V = V.negate(); // (optional here; we only need s fixed)
+        }
+
+        // 4) Reconstruct Z and compute W = s · Z
+        BigInteger yZ = new BigInteger(1, yZbytes);
+        Edwards.Point Z = E.getPoint(yZ, xLsbZ);
+        if (Z.isZero())
+            throw new InvalidParameterException("Invalid Z in cryptogram.");
+        Edwards.Point W = Z.mul(s);
+
+        // 5) k_a || k_e = SHAKE-256( y(W) ), 64 bytes total
+        byte[] yW = toFixedLength(W.y, 32); // package-private y is accessible from default package
+        byte[] kk = SHA3SHAKE2.SHAKE(256, yW, 64 * 8, null);
+        byte[] k_a = Arrays.copyOfRange(kk, 0, 32);
+        byte[] k_e = Arrays.copyOfRange(kk, 32, 64);
+
+        // 6) Verify tag: t' = SHA3-256( k_a || c )
+        byte[] macInput = new byte[k_a.length + c.length];
+        System.arraycopy(k_a, 0, macInput, 0, k_a.length);
+        System.arraycopy(c, 0, macInput, k_a.length, c.length);
+        byte[] tPrime = SHA3SHAKE2.SHA3(256, macInput, null);
+        if (!constantTimeEquals(tPrime, t)) {
+            throw new InvalidParameterException("*** Authentication failed (bad tag) ***");
+        }
+
+        // 7) Decrypt: m = c XOR SHAKE-128(k_e, |c|)
+        byte[] keystream = SHA3SHAKE2.SHAKE(128, k_e, c.length * 8, null);
+        byte[] m = new byte[c.length];
+        for (int i = 0; i < c.length; i++)
+            m[i] = (byte) (c[i] ^ keystream[i]);
+
+        return m;
     }
-    final byte[] blob = hexStringToByteArray(hex);
 
-    // Expected wire format (clean, self-delimiting):
-    //   32B  y(Z) big-endian, unsigned
-    //   1B   xLSB(Z)  (0x00 or 0x01)
-    //   4B   cLen (big-endian)
-    //   cLen bytes c
-    //   32B  t = SHA3-256(k_a || c)
-    if (blob.length < 32 + 1 + 4 + 32) {
-        throw new InvalidParameterException("Cipher blob too short.");
-    }
-    int idx = 0;
-    byte[] yZbytes = Arrays.copyOfRange(blob, idx, idx + 32); idx += 32;
-    boolean xLsbZ = blob[idx++] != 0;
-    int cLen = ByteBuffer.wrap(blob, idx, 4).order(ByteOrder.BIG_ENDIAN).getInt(); idx += 4;
-    if (cLen < 0 || blob.length != 32 + 1 + 4 + cLen + 32) {
-        throw new InvalidParameterException("Malformed ciphertext length.");
-    }
-    byte[] c = Arrays.copyOfRange(blob, idx, idx + cLen); idx += cLen;
-    byte[] t = Arrays.copyOfRange(blob, idx, idx + 32);
-
-    // 3) Derive private key s from passphrase (SHAKE-128 → 32B → mod r) and enforce xLSB(V)==0
-    Edwards E = new Edwards();
-    BigInteger r = E.getR();
-
-    byte[] sBytesRaw = SHA3SHAKE2.SHAKE(128, passphrase.getBytes(StandardCharsets.UTF_8), 256, null);
-    BigInteger s = new BigInteger(1, sBytesRaw).mod(r);
-
-    Edwards.Point G = E.gen();
-    Edwards.Point V = G.mul(s);
-    if (V.getX().testBit(0)) {            // if LSB(x(V)) == 1
-        s = r.subtract(s);                 // s ← r − s
-        //noinspection UnusedAssignment
-        V = V.negate();                    // (optional here; we only need s fixed)
-    }
-
-    // 4) Reconstruct Z and compute W = s · Z
-    BigInteger yZ = new BigInteger(1, yZbytes);
-    Edwards.Point Z = E.getPoint(yZ, xLsbZ);
-    if (Z.isZero()) throw new InvalidParameterException("Invalid Z in cryptogram.");
-    Edwards.Point W = Z.mul(s);
-
-    // 5) k_a || k_e = SHAKE-256( y(W) ), 64 bytes total
-    byte[] yW = toFixedLength(W.y, 32);                 // package-private y is accessible from default package
-    byte[] kk = SHA3SHAKE2.SHAKE(256, yW, 64 * 8, null);
-    byte[] k_a = Arrays.copyOfRange(kk, 0, 32);
-    byte[] k_e = Arrays.copyOfRange(kk, 32, 64);
-
-    // 6) Verify tag: t' = SHA3-256( k_a || c )
-    byte[] macInput = new byte[k_a.length + c.length];
-    System.arraycopy(k_a, 0, macInput, 0, k_a.length);
-    System.arraycopy(c, 0, macInput, k_a.length, c.length);
-    byte[] tPrime = SHA3SHAKE2.SHA3(256, macInput, null);
-    if (!constantTimeEquals(tPrime, t)) {
-        throw new InvalidParameterException("*** Authentication failed (bad tag) ***");
-    }
-
-    // 7) Decrypt: m = c XOR SHAKE-128(k_e, |c|)
-    byte[] keystream = SHA3SHAKE2.SHAKE(128, k_e, c.length * 8, null);
-    byte[] m = new byte[c.length];
-    for (int i = 0; i < c.length; i++) m[i] = (byte) (c[i] ^ keystream[i]);
-
-    return m;
-}
-public static byte[] signMode(File inFile, String passphrase) throws IOException {
+    public static byte[] signMode(File inFile, String passphrase) throws IOException {
         byte[] message = Files.readAllBytes(inFile.toPath());
         Edwards curve = new Edwards();
         Schnorr schnorr = new Schnorr();
@@ -860,14 +867,14 @@ public static byte[] signMode(File inFile, String passphrase) throws IOException
         return ok ? "VALID".getBytes(StandardCharsets.UTF_8) : "INVALID".getBytes(StandardCharsets.UTF_8);
     }
 
-
-private static boolean constantTimeEquals(byte[] a, byte[] b) {
-    if (a.length != b.length) return false;
-    int v = 0;
-    for (int i = 0; i < a.length; i++) v |= (a[i] ^ b[i]);
-    return v == 0;
-}
-
+    private static boolean constantTimeEquals(byte[] a, byte[] b) {
+        if (a.length != b.length)
+            return false;
+        int v = 0;
+        for (int i = 0; i < a.length; i++)
+            v |= (a[i] ^ b[i]);
+        return v == 0;
+    }
 
     // Helper to convert hex string to byte array
     public static byte[] hexStringToByteArray(String s) {
