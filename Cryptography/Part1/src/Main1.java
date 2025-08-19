@@ -80,7 +80,7 @@ public class Main1 {
                         result = encryptMode(inputFile, passphrase);
                         break;
                     case "4":
-                        inputFile = new File(requireExistingFile(userInput));
+                        inputFile = new File(requireExistingFile(userOutput));
                         // passphrase = validatePassphrase(input, passphrase);
                         result = decryptMode(inputFile, passphrase);
                         break;
@@ -484,9 +484,10 @@ public class Main1 {
 
         // (bonus: include a MAC tag using SHA-3-256 and the same key) (key +
         // ciphertext)
-        byte[] macInput = new byte[key.length + ciphertext.length];
+        byte[] macInput = new byte[key.length + nonce.length + ciphertext.length];
         System.arraycopy(key, 0, macInput, 0, key.length);
-        System.arraycopy(ciphertext, 0, macInput, key.length, ciphertext.length);
+        System.arraycopy(nonce, 0, macInput, key.length, nonce.length);
+        System.arraycopy(ciphertext, 0, macInput, key.length + nonce.length, ciphertext.length);
         byte[] mac = SHA3SHAKE.SHA3(256, macInput, null);
 
         // Putting it together, nonce + ciphertext + mac
@@ -522,6 +523,27 @@ public class Main1 {
         // Remove all whitespace from hex string
         hexString = hexString.replaceAll("\\s+", "");
 
+        if (!hexString.isEmpty() && hexString.charAt(0) == '\uFEFF') {
+            hexString = hexString.substring(1);
+        }
+
+        // Keep only hex digits (filters out zero-width spaces and other sneaky chars)
+        StringBuilder clean = new StringBuilder(hexString.length());
+        for (int i = 0; i < hexString.length(); i++) {
+            char c = hexString.charAt(i);
+            if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+                clean.append(c);
+            }
+        }
+        hexString = clean.toString();
+
+        // Must be an even number of hex digits
+        if ((hexString.length() & 1) != 0) {
+            throw new InvalidParameterException(
+                    "Encrypted file has an odd number of hex digits (likely truncated). Re-run encryption and try again."
+            );
+        }
+
         // Convert hex string to byte array
         byte[] encryptedData = hexStringToByteArray(hexString);
 
@@ -536,18 +558,25 @@ public class Main1 {
         byte[] mac = Arrays.copyOfRange(encryptedData, encryptedData.length - MAC_LENGTH, encryptedData.length);
         byte[] ciphertext = Arrays.copyOfRange(encryptedData, NONCE_LENGTH, encryptedData.length - MAC_LENGTH);
 
+        if (ciphertext.length == 0) {
+            throw new InvalidParameterException("No ciphertext found after nonce; cryptogram is malformed.");
+        }
+
         // Derive key from passPhrase (SHAKE-128, 128 bits)
         byte[] key = SHA3SHAKE.SHAKE(128, passPhrase.getBytes(StandardCharsets.UTF_8), 128,
                 null);
 
         // Verify MAC = SHA3-256(key || ciphertext)
-        byte[] macInput = new byte[key.length + ciphertext.length];
+        byte[] macInput = new byte[key.length + nonce.length + ciphertext.length];
         System.arraycopy(key, 0, macInput, 0, key.length);
-        System.arraycopy(ciphertext, 0, macInput, key.length, ciphertext.length);
+        System.arraycopy(nonce, 0, macInput, key.length, nonce.length);
+        System.arraycopy(ciphertext, 0, macInput, key.length + nonce.length, ciphertext.length);
         byte[] macComputed = SHA3SHAKE.SHA3(256, macInput, null);
 
         if (!Arrays.equals(mac, macComputed)) {
-            throw new InvalidParameterException("***!Incorrect password!***");
+            throw new InvalidParameterException(
+                    "***!Incorrect password or corrupted file!*** (MAC verification failed)"
+            );
         } else {
 
             // Generate keystream the same way as encryption (SHAKE-128 absorbs nonce then
