@@ -1,5 +1,6 @@
 import java.math.BigInteger;
 import java.security.SecureRandom;
+import java.nio.charset.StandardCharsets;
 
 public class Schnorr {
 
@@ -11,59 +12,83 @@ public class Schnorr {
         }
     }
 
-    public Signature generateKeypair(byte[] message, Edwards curve, String passphrase) {
-        BigInteger r = curve.getR();
-        Edwards.Point G = curve.gen();
+    private static final SecureRandom RNG = new SecureRandom();
 
-        // Private key from passphrase
-        SHA3SHAKE shake = new SHA3SHAKE();
-        shake.init(256);
-        shake.absorb(passphrase.getBytes());
-        byte[] sBytes = shake.squeeze(32);
+    /**
+     * Produce a Schnorr signature (z,h) for message using a private key
+     * deterministically derived from the passphrase (per spec).
+     *
+     * NOTE: Name kept as generateKeypair() to match existing Main.java usage.
+     */
+    public Signature generateKeypair(byte[] message, Edwards curve, String passphrase) {
+        final BigInteger r = curve.getR();
+        final Edwards.Point G = curve.gen();
+
+        // ---- Private key from passphrase: s = SHAKE-128(passphrase,32B) mod r; enforce xLSB(V)==0
+        byte[] sBytes = new byte[32];
+        SHA3SHAKE2.SHAKE(128, passphrase.getBytes(StandardCharsets.UTF_8), 256, sBytes);
         BigInteger s = new BigInteger(1, sBytes).mod(r);
         Edwards.Point V = G.mul(s);
-
         if (V.getX().testBit(0)) {
             s = r.subtract(s);
             V = V.negate();
         }
 
-        // Generate random nonce
-        SecureRandom rng = new SecureRandom();
-        BigInteger k = new BigInteger(r.bitLength() + 64, rng).mod(r);
+        BigInteger k;
+        do {
+            k = new BigInteger(r.bitLength(), RNG).mod(r);
+        } while (k.signum() == 0);
+
         Edwards.Point U = G.mul(k);
 
-        // h = H(U.y || message)
-        byte[] input = concat(U.y.toByteArray(), message);
-        byte[] hashOutput = SHA3SHAKE.SHA3(256, input, new byte[32]);
-        BigInteger h = new BigInteger(1, hashOutput).mod(r);
+        byte[] hyInput = concat(toUnsignedFixed(U.y, 32), message);
+        byte[] hDigest = new byte[32];
+        SHA3SHAKE2.SHA3(256, hyInput, hDigest);
+        BigInteger h = new BigInteger(1, hDigest).mod(r);
 
-        // z = (k - h·s) mod r
         BigInteger z = k.subtract(h.multiply(s)).mod(r);
 
         return new Signature(z, h);
     }
 
-    public boolean verify(byte[] message, Edwards.Point V, Edwards curve, BigInteger z, BigInteger h) {
-        BigInteger r = curve.getR();
-        Edwards.Point G = curve.gen();
+    /**
+     * Verify Schnorr signature (z,h) on message with public key V.
+     */
+    public boolean verify(byte[] message, Edwards curve, Edwards.Point V, BigInteger z, BigInteger h) {
+        final BigInteger r = curve.getR();
+        final Edwards.Point G = curve.gen();
 
-        // U' = z·G + h·V
-        Edwards.Point U_prime = G.mul(z).add(V.mul(h));
+        Edwards.Point Uprime = G.mul(z).add(V.mul(h));
 
-        // h' = H(U'.y || message)
-        byte[] input = concat(U_prime.y.toByteArray(), message);
-        byte[] digest = SHA3SHAKE.SHA3(256, input, null);
-        BigInteger hPrime = new BigInteger(1, digest).mod(r);
+        byte[] hyInput = concat(toUnsignedFixed(Uprime.y, 32), message);
+        byte[] hDigest = new byte[32];
+        SHA3SHAKE2.SHA3(256, hyInput, hDigest);
+        BigInteger hPrime = new BigInteger(1, hDigest).mod(r);
 
-        return hPrime.equals(h);
+        return hPrime.equals(h.mod(r));
     }
 
-    private byte[] concat(byte[] a, byte[] b) {
+    // -------- helpers --------
+
+    /** Big-endian unsigned fixed-length encoding for BigInteger. */
+    private static byte[] toUnsignedFixed(BigInteger v, int len) {
+        byte[] src = v.toByteArray(); // may contain a leading 0x00
+        if (src.length == len) return src;
+        if (src.length == len + 1 && src[0] == 0x00) {
+            byte[] out = new byte[len];
+            System.arraycopy(src, 1, out, 0, len);
+            return out;
+        }
+        byte[] out = new byte[len];
+        int copy = Math.min(len, src.length);
+        System.arraycopy(src, src.length - copy, out, len - copy, copy);
+        return out;
+    }
+
+    private static byte[] concat(byte[] a, byte[] b) {
         byte[] out = new byte[a.length + b.length];
         System.arraycopy(a, 0, out, 0, a.length);
         System.arraycopy(b, 0, out, a.length, b.length);
         return out;
     }
 }
-

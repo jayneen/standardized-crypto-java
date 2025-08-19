@@ -1,6 +1,6 @@
 /**
  * Assignment 1
- * part: 1
+ * part: 2
  *
  * This is a retrofitted version of Markku-Juhani O. Saarinen original C implementation,
  * but converted to Java. All credit goes to Saarinen, all we did was adjust it slightly
@@ -15,7 +15,7 @@
  * Revised 03-Sep-15 for portability + OpenSSL - style API
  */
 
-public class KECCAK_F {
+public class KECCAK_F2 {
     private static final int KECCAKF_ROUNDS = 24;
 
     //Constants
@@ -50,7 +50,7 @@ public class KECCAK_F {
     private int bufferPos;
 
     //Full constructor (depreciated)
-    public KECCAK_F(int outputBits) {
+    public KECCAK_F2(int outputBits) {
         this.outputLength = outputBits / 8;
         this.capacity = outputBits * 2;
         this.rate = 200 - (capacity / 8);
@@ -59,7 +59,7 @@ public class KECCAK_F {
     }
 
     //Minimal constructor for permutation use only
-    public KECCAK_F() {
+    public KECCAK_F2() {
         //No buffer/rate setup needed for standalone permutation
     }
 
@@ -174,7 +174,7 @@ public class KECCAK_F {
         if (input.length != 200)
             throw new IllegalArgumentException("State must be 200 bytes");
 
-        KECCAK_F kf = new KECCAK_F();
+        KECCAK_F2 kf = new KECCAK_F2();
 
         //Load the state from input
         for (int i = 0; i < 25; i++) {

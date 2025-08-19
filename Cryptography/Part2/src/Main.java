@@ -1,21 +1,23 @@
 
-/**
- * Assignment 1
- * part: 2
- * 
- * This is the main application using SHA3, SHAKE, ECIES, and Schnorr inspired algorithms
- * to provide seven utility modes: hash computation, tag generation, symmetric file 
- * encryption and decryption, key pair generation, and asymmetric encryption and decryption.
- * It accepts optional command line arguments in the order: input file path, output 
- * file path, and pass phrase. Do not use input files greater than ~2GB.
- * 
- * @author Kassie Whitney, Zane Swaims, Evgeniia Nemynova
+/*
+  Assignment 1
+  part: 2
+  <p>
+  This is the main application using SHA3, SHAKE, ECIES, and Schnorr inspired algorithms
+  to provide seven utility modes: hash computation, tag generation, symmetric file
+  encryption and decryption, key pair generation, and asymmetric encryption and decryption.
+  It accepts optional command line arguments in the order: input file path, output
+  file path, and pass phrase. Do not use input files greater than ~2GB.
+
+  @author Kassie Whitney, Zane Swaims, Evgeniia Nemynova
  * @version 9.8.25
  */
 
 import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
@@ -64,6 +66,10 @@ public class Main {
                         5 - to generate a key pair
                         6 - to encrypt a file
                         7 - to decrypt a file
+
+                        Asymmetric signatures:
+                        8 - to sign a file
+                        9 - to verify a signature
                         Q - to quit the program
 
                         """);
@@ -76,7 +82,7 @@ public class Main {
 
                 // Apply mode
                 File inputFile = null;
-                File keyFile = null;
+                File keyFile;
                 byte[] result;
                 switch (userMode) {
                     case "1":
@@ -116,6 +122,18 @@ public class Main {
                         inputFile = new File(validateInputFile(input, userInput));
                         keyFile = new File(validateKeyFile(input, userKey));
                         result = asymmetricDecryptMode(inputFile, keyFile);
+                        break;
+                    case "8":
+                        inputFile = new File(validateInputFile(input, userInput));
+                        passphrase = validatePassphrase(input, passphrase);
+                        result = signMode(inputFile, passphrase);
+                        break;
+                    case "9":
+                        isDecrypt = true;
+                        inputFile = new File(validateInputFile(input, userInput));
+                        File sigFile = new File(validateSignatureFile(input, null));
+                        keyFile = new File(validateKeyFile(input, userKey));
+                        result = verifyMode(inputFile, sigFile, keyFile);
                         break;
                     default:
                         System.out.println("Invalid mode entered. Please select a valid mode.\n");
@@ -162,7 +180,6 @@ public class Main {
                             """);
                     return;
                 }
-                ;
             }
         }
 
@@ -277,7 +294,7 @@ public class Main {
      * @param inputFile current input file path
      */
     public static String validateInputFile(Scanner input, String inputFile) throws IOException {
-        while (inputFile == null || inputFile.equals("")) {
+        while (inputFile == null || inputFile.isEmpty()) {
             System.out.println("Please enter an input file path: ");
             inputFile = input.nextLine();
         }
@@ -286,7 +303,7 @@ public class Main {
         }
 
         System.out.print("Input file size: ");
-        fileSize(inputFile.getBytes(StandardCharsets.UTF_8));
+        fileSize(Files.readAllBytes(new File(inputFile).toPath()));
 
         return inputFile;
     }
@@ -298,25 +315,39 @@ public class Main {
      * @param keyFile current input file path
      */
     public static String validateKeyFile(Scanner input, String keyFile) throws IOException {
-        while (keyFile == null || keyFile.equals("")) {
+        while (keyFile == null || keyFile.isEmpty()) {
             System.out.println("Please enter a public key file path: ");
             keyFile = input.nextLine();
         }
+
         if (!Files.exists(new File(keyFile).toPath())) {
             throw new IOException();
         }
 
         System.out.print("Key file size: ");
-        fileSize(keyFile.getBytes(StandardCharsets.UTF_8));
+        fileSize(Files.readAllBytes(new File(keyFile).toPath()));
 
         return keyFile;
     }
 
-    /***************************************************************************/
-    /******************************* MODES ***********************************/
-    /***************************************************************************/
+    public static String validateSignatureFile(Scanner input, String sigFile) throws IOException {
+        while (sigFile == null || sigFile.isEmpty()) {
+            System.out.println("Please enter a signature file path: ");
+            sigFile = input.nextLine();
+        }
+        if (!Files.exists(new File(sigFile).toPath())) {
+            throw new IOException();
+        }
+        System.out.print("Signature file size: ");
+        fileSize(Files.readAllBytes(new File(sigFile).toPath()));
+        return sigFile;
+    }
 
-    /******************************* PART 1 **********************************/
+    //***************************************************************************/
+    //******************************* MODES ***********************************/
+    //***************************************************************************/
+
+    //******************************* PART 1 **********************************/
     /**
      * Handles the first task of hashing a user specified file
      * using SHA-3-256 and -512 (bonus: -224, 384).
@@ -327,7 +358,7 @@ public class Main {
     public static byte[] hashMode(File inFile) {
 
         // prompt for security level and verify with a cursed while loop
-        int ShaSecLevel = 0;
+        int ShaSecLevel;
         while (true) {
             System.out.print("Please enter a security level for SHA-3 (224, 256, 384, 512) > ");
             ShaSecLevel = Integer.parseInt(input.nextLine());
@@ -342,24 +373,17 @@ public class Main {
 
         byte[] sha = new byte[0];
         try {
-            switch (ShaSecLevel) {
-                case 224:
-                    sha = SHA3SHAKE.SHA3(224, Files.readAllBytes(inFile.toPath()),
-                            null);
-                    break;
-                case 256:
-                    sha = SHA3SHAKE.SHA3(256, Files.readAllBytes(inFile.toPath()),
-                            null);
-                    break;
-                case 384:
-                    sha = SHA3SHAKE.SHA3(384, Files.readAllBytes(inFile.toPath()),
-                            null);
-                    break;
-                case 512:
-                    sha = SHA3SHAKE.SHA3(512, Files.readAllBytes(inFile.toPath()),
-                            null);
-                    break;
-            }
+            sha = switch (ShaSecLevel) {
+                case 224 -> SHA3SHAKE2.SHA3(224, Files.readAllBytes(inFile.toPath()),
+                        null);
+                case 256 -> SHA3SHAKE2.SHA3(256, Files.readAllBytes(inFile.toPath()),
+                        null);
+                case 384 -> SHA3SHAKE2.SHA3(384, Files.readAllBytes(inFile.toPath()),
+                        null);
+                case 512 -> SHA3SHAKE2.SHA3(512, Files.readAllBytes(inFile.toPath()),
+                        null);
+                default -> sha;
+            };
 
             System.out.println("Outputting...");
 
@@ -384,7 +408,7 @@ public class Main {
     public static byte[] tagMode(File inFile, String passPhrase) {
 
         // prompt for security level and verify
-        int ShakeSecLevel = 0;
+        int ShakeSecLevel;
         while (true) {
             System.out.print("Please enter a security level for SHAKE (128,256) > ");
             ShakeSecLevel = Integer.parseInt(input.nextLine());
@@ -457,14 +481,11 @@ public class Main {
         }
 
         System.out.println("Computing a SHAKE-" + ShakeSecLevel + " tag...");
-        switch (ShakeSecLevel) {
-            case 128:
-                shake = SHA3SHAKE.SHAKE(128, kMac, len, null);
-                break;
-            case 256:
-                shake = SHA3SHAKE.SHAKE(256, kMac, len, null);
-                break;
-        }
+        shake = switch (ShakeSecLevel) {
+            case 128 -> SHA3SHAKE2.SHAKE(128, kMac, len, null);
+            case 256 -> SHA3SHAKE2.SHAKE(256, kMac, len, null);
+            default -> shake;
+        };
 
         System.out.println("Outputting...");
 
@@ -495,7 +516,8 @@ public class Main {
         byte[] fileBytes = Files.readAllBytes(inFile.toPath());
 
         // 1) hashing the pass phrase with SHAKE-128 as the key
-        byte[] key = SHA3SHAKE.SHAKE(128, passPhrase.getBytes(StandardCharsets.UTF_8), 16, null);
+        byte[] key = SHA3SHAKE2.SHAKE(128, passPhrase.getBytes(StandardCharsets.UTF_8), 16,
+                null);
 
         // 2) obtaining a random 128-bit nonce
         byte[] nonce = new byte[16];
@@ -509,7 +531,7 @@ public class Main {
         System.arraycopy(nonce, 0, combinedData, 0, nonce.length);
         System.arraycopy(key, 0, combinedData, nonce.length, key.length);
 
-        SHA3SHAKE shake = new SHA3SHAKE();
+        SHA3SHAKE2 shake = new SHA3SHAKE2();
         shake.init(128);
         shake.absorb(combinedData);
         byte[] keystream = shake.squeeze(fileBytes.length);
@@ -525,7 +547,7 @@ public class Main {
         byte[] macInput = new byte[key.length + ciphertext.length];
         System.arraycopy(key, 0, macInput, 0, key.length);
         System.arraycopy(ciphertext, 0, macInput, key.length, ciphertext.length);
-        byte[] mac = SHA3SHAKE.SHA3(256, macInput, null);
+        byte[] mac = SHA3SHAKE2.SHA3(256, macInput, null);
 
         // Putting it together, nonce + ciphertext + mac
         byte[] output = new byte[nonce.length + ciphertext.length + mac.length];
@@ -549,7 +571,7 @@ public class Main {
 
         // Read hex string from file (with spaces)
 
-        byte[] plaintext = new byte[0];
+        byte[] plaintext;
         String hexString;
         try {
             hexString = Files.readString(inFile.toPath());
@@ -575,13 +597,14 @@ public class Main {
         byte[] ciphertext = Arrays.copyOfRange(encryptedData, NONCE_LENGTH, encryptedData.length - MAC_LENGTH);
 
         // Derive key from passPhrase (SHAKE-128, 128 bits)
-        byte[] key = SHA3SHAKE.SHAKE(128, passPhrase.getBytes(StandardCharsets.UTF_8), 16, null);
+        byte[] key = SHA3SHAKE2.SHAKE(128, passPhrase.getBytes(StandardCharsets.UTF_8), 16,
+                null);
 
         // Verify MAC = SHA3-256(key || ciphertext)
         byte[] macInput = new byte[key.length + ciphertext.length];
         System.arraycopy(key, 0, macInput, 0, key.length);
         System.arraycopy(ciphertext, 0, macInput, key.length, ciphertext.length);
-        byte[] macComputed = SHA3SHAKE.SHA3(256, macInput, null);
+        byte[] macComputed = SHA3SHAKE2.SHA3(256, macInput, null);
 
         if (!Arrays.equals(mac, macComputed)) {
             throw new InvalidParameterException("***!Incorrect password!***");
@@ -594,7 +617,7 @@ public class Main {
             System.arraycopy(nonce, 0, combinedData, 0, nonce.length);
             System.arraycopy(key, 0, combinedData, nonce.length, key.length);
 
-            SHA3SHAKE shake = new SHA3SHAKE();
+            SHA3SHAKE2 shake = new SHA3SHAKE2();
             shake.init(128);
             shake.absorb(combinedData);
             byte[] keystream = shake.squeeze(ciphertext.length);
@@ -608,9 +631,7 @@ public class Main {
 
         return plaintext;
     }
-
-    /******************************* PART 2 **********************************/
-
+//*********************** PART 2 ********************************
     /**
      * Handles the first task of generating an elliptic key pair
      * from a given passphrase.
@@ -620,32 +641,21 @@ public class Main {
      */
     public static byte[] keyPairMode(String passphrase) {
         Edwards ed = new Edwards();
-        byte[] absorbedPass = SHA3SHAKE.SHAKE(128,
+        byte[] absorbedPass = SHA3SHAKE2.SHAKE(128,
                 passphrase.getBytes(StandardCharsets.UTF_8), 32 * 8, null);
-
-        // get s mod r
         BigInteger s = new BigInteger(1, absorbedPass);
         s = s.mod(ed.getR());
-
-        // compute V = s * G
         Edwards.Point V = ed.gen().mul(s);
-
-        // remove redundancy
         if (V.getX().testBit(0)) {
+            //noinspection UnusedAssignment
             s = ed.getR().subtract(s);
             V = V.negate();
         }
-
-        byte[] sBytes = toFixedLengthBytes(s, 32);
-        byte[] xBytes = toFixedLengthBytes(V.getX(), 32);
         byte[] yBytes = toFixedLengthBytes(V.y, 32);
-
-        byte[] keyPair = new byte[96];
-        System.arraycopy(sBytes, 0, keyPair, 0, 32);
-        System.arraycopy(xBytes, 0, keyPair, 32, 32);
-        System.arraycopy(yBytes, 0, keyPair, 64, 32);
-
-        return keyPair;
+        byte[] out = new byte[33];
+        System.arraycopy(yBytes, 0, out, 0, 32);
+        out[32] = (byte)(V.getX().testBit(0) ? 1 : 0);
+        return out;
     }
 
     /**
@@ -657,58 +667,52 @@ public class Main {
      * @param keyFile user specified public key containing file
      * @return the cryptogram
      */
+    @SuppressWarnings("unused")
     public static byte[] asymmetricEncryptMode(File inFile, File keyFile, String passphrase) throws IOException {
-        Edwards curve = new Edwards();
-
-        // 1. Read key file hex string and remove whitespace (expecting 192 hex chars = 96 bytes)
-        String keyHex = new String(Files.readAllBytes(keyFile.toPath())).replaceAll("\\s", "");
+        Edwards E = new Edwards();
+        String keyHex = new String(Files.readAllBytes(keyFile.toPath())).replaceAll(" ", "");
         byte[] keyBytes = hexStringToByteArray(keyHex);
-
-        if (keyBytes.length != 96) {
-            throw new IllegalArgumentException("Key file must be exactly 96 bytes (3 x 32 bytes).");
+        if (keyBytes.length != 33) {
+            throw new IllegalArgumentException("Key file must be exactly 33 bytes (y || xLSB).");
         }
-
-        // 2. Split into y, x, z (each 32 bytes)
-        byte[] yBytes = new byte[32];
-        byte[] xBytes = new byte[32];
-        byte[] zBytes = new byte[32]; // unused here, but preserved
-
-        System.arraycopy(keyBytes, 0, yBytes, 0, 32);
-        System.arraycopy(keyBytes, 32, xBytes, 0, 32);
-        System.arraycopy(keyBytes, 64, zBytes, 0, 32);
-
-        // 3. Convert yBytes to BigInteger y
-        BigInteger y = new BigInteger(1, yBytes);
-
-        // 4. Extract the least significant bit (LSB) of the last byte of xBytes as xLSB
-        boolean xLSB = (xBytes[31] & 1) == 1;
-
-        // 5. Reconstruct public key point from y and xLSB
-        Edwards.Point publicKey = curve.getPoint(y, xLSB);
-        if (publicKey.isZero()) {
-            throw new IllegalArgumentException("Invalid public key point reconstructed.");
+        byte[] yBytes = Arrays.copyOfRange(keyBytes, 0, 32);
+        boolean xLsb = keyBytes[32] != 0;
+        BigInteger yV = new BigInteger(1, yBytes);
+        Edwards.Point V = E.getPoint(yV, xLsb);
+        if (V.isZero()) {
+            throw new InvalidParameterException("Invalid public key.");
         }
-
-        // 6. Read the input file bytes (message)
-        byte[] message = Files.readAllBytes(inFile.toPath());
-
-        // 7. Generate Schnorr signature with message, curve, and passphrase
-        Schnorr schnorr = new Schnorr();
-        Schnorr.Signature sig = schnorr.generateKeypair(message, curve, passphrase);
-
-        // 8. Serialize signature parts z and h into fixed 32-byte arrays
-        byte[] zBytesSig = toFixedLength(sig.z, 32);
-        byte[] hBytesSig = toFixedLength(sig.h, 32);
-
-        // 9. Concatenate z || h to produce the encrypted output
-        byte[] result = new byte[64];
-        System.arraycopy(zBytesSig, 0, result, 0, 32);
-        System.arraycopy(hBytesSig, 0, result, 32, 32);
-
-        return result;
+        byte[] m = Files.readAllBytes(inFile.toPath());
+        int rbytes = (E.getR().bitLength() + 7) >> 3;
+        byte[] seed = new SecureRandom().generateSeed(rbytes << 1);
+        BigInteger k = new BigInteger(1, seed).mod(E.getR());
+        Edwards.Point G = E.gen();
+        Edwards.Point W = V.mul(k);
+        Edwards.Point Z = G.mul(k);
+        byte[] yW = toFixedLength(W.y, 32);
+        byte[] kk = SHA3SHAKE2.SHAKE(256, yW, 64 * 8, null);
+        byte[] k_a = Arrays.copyOfRange(kk, 0, 32);
+        byte[] k_e = Arrays.copyOfRange(kk, 32, 64);
+        byte[] keystream = SHA3SHAKE2.SHAKE(128, k_e, m.length * 8, null);
+        byte[] c = new byte[m.length];
+        for (int i = 0; i < m.length; i++) c[i] = (byte)(m[i] ^ keystream[i]);
+        byte[] macInput = new byte[k_a.length + c.length];
+        System.arraycopy(k_a, 0, macInput, 0, k_a.length);
+        System.arraycopy(c, 0, macInput, k_a.length, c.length);
+        byte[] t = SHA3SHAKE2.SHA3(256, macInput, null);
+        byte[] yZ = toFixedLength(Z.y, 32);
+        byte xlsbZ = (byte)(Z.getX().testBit(0) ? 1 : 0);
+        ByteBuffer bb = ByteBuffer.allocate(32 + 1 + 4 + c.length + 32).order(ByteOrder.BIG_ENDIAN);
+        bb.put(yZ);
+        bb.put(xlsbZ);
+        bb.putInt(c.length);
+        bb.put(c);
+        bb.put(t);
+        return bb.array();
     }
 
     // Helper to convert BigInteger to fixed-length byte array (big-endian), left-padded with zeros
+    @SuppressWarnings("SameParameterValue")
     private static byte[] toFixedLength(BigInteger value, int length) {
         byte[] raw = value.toByteArray();
         if (raw.length == length) {
@@ -738,9 +742,132 @@ public class Main {
      * @param keyFile user specified public key containing file
      * @return decrypted message
      */
+    @SuppressWarnings("unused")
     public static byte[] asymmetricDecryptMode(File inFile, File keyFile) {
-        return null;
+
+    // 1) Get the passphrase (since case "7" didn't capture it)
+    String passphrase = validatePassphrase(input, null);
+
+    // 2) Read the cryptogram file as hex (your app writes bytes → hex with spaces)
+    final String hex;
+    try {
+        hex = Files.readString(inFile.toPath()).replaceAll("\\s+", "");
+    } catch (IOException e) {
+        throw new RuntimeException("Failed to read input file", e);
     }
+    final byte[] blob = hexStringToByteArray(hex);
+
+    // Expected wire format (clean, self-delimiting):
+    //   32B  y(Z) big-endian, unsigned
+    //   1B   xLSB(Z)  (0x00 or 0x01)
+    //   4B   cLen (big-endian)
+    //   cLen bytes c
+    //   32B  t = SHA3-256(k_a || c)
+    if (blob.length < 32 + 1 + 4 + 32) {
+        throw new InvalidParameterException("Cipher blob too short.");
+    }
+    int idx = 0;
+    byte[] yZbytes = Arrays.copyOfRange(blob, idx, idx + 32); idx += 32;
+    boolean xLsbZ = blob[idx++] != 0;
+    int cLen = ByteBuffer.wrap(blob, idx, 4).order(ByteOrder.BIG_ENDIAN).getInt(); idx += 4;
+    if (cLen < 0 || blob.length != 32 + 1 + 4 + cLen + 32) {
+        throw new InvalidParameterException("Malformed ciphertext length.");
+    }
+    byte[] c = Arrays.copyOfRange(blob, idx, idx + cLen); idx += cLen;
+    byte[] t = Arrays.copyOfRange(blob, idx, idx + 32);
+
+    // 3) Derive private key s from passphrase (SHAKE-128 → 32B → mod r) and enforce xLSB(V)==0
+    Edwards E = new Edwards();
+    BigInteger r = E.getR();
+
+    byte[] sBytesRaw = SHA3SHAKE2.SHAKE(128, passphrase.getBytes(StandardCharsets.UTF_8), 256, null);
+    BigInteger s = new BigInteger(1, sBytesRaw).mod(r);
+
+    Edwards.Point G = E.gen();
+    Edwards.Point V = G.mul(s);
+    if (V.getX().testBit(0)) {            // if LSB(x(V)) == 1
+        s = r.subtract(s);                 // s ← r − s
+        //noinspection UnusedAssignment
+        V = V.negate();                    // (optional here; we only need s fixed)
+    }
+
+    // 4) Reconstruct Z and compute W = s · Z
+    BigInteger yZ = new BigInteger(1, yZbytes);
+    Edwards.Point Z = E.getPoint(yZ, xLsbZ);
+    if (Z.isZero()) throw new InvalidParameterException("Invalid Z in cryptogram.");
+    Edwards.Point W = Z.mul(s);
+
+    // 5) k_a || k_e = SHAKE-256( y(W) ), 64 bytes total
+    byte[] yW = toFixedLength(W.y, 32);                 // package-private y is accessible from default package
+    byte[] kk = SHA3SHAKE2.SHAKE(256, yW, 64 * 8, null);
+    byte[] k_a = Arrays.copyOfRange(kk, 0, 32);
+    byte[] k_e = Arrays.copyOfRange(kk, 32, 64);
+
+    // 6) Verify tag: t' = SHA3-256( k_a || c )
+    byte[] macInput = new byte[k_a.length + c.length];
+    System.arraycopy(k_a, 0, macInput, 0, k_a.length);
+    System.arraycopy(c, 0, macInput, k_a.length, c.length);
+    byte[] tPrime = SHA3SHAKE2.SHA3(256, macInput, null);
+    if (!constantTimeEquals(tPrime, t)) {
+        throw new InvalidParameterException("*** Authentication failed (bad tag) ***");
+    }
+
+    // 7) Decrypt: m = c XOR SHAKE-128(k_e, |c|)
+    byte[] keystream = SHA3SHAKE2.SHAKE(128, k_e, c.length * 8, null);
+    byte[] m = new byte[c.length];
+    for (int i = 0; i < c.length; i++) m[i] = (byte) (c[i] ^ keystream[i]);
+
+    return m;
+}
+public static byte[] signMode(File inFile, String passphrase) throws IOException {
+        byte[] message = Files.readAllBytes(inFile.toPath());
+        Edwards curve = new Edwards();
+        Schnorr schnorr = new Schnorr();
+        Schnorr.Signature sig = schnorr.generateKeypair(message, curve, passphrase);
+        byte[] zBytes = toFixedLength(sig.z, 32);
+        byte[] hBytes = toFixedLength(sig.h, 32);
+        byte[] out = new byte[64];
+        System.arraycopy(zBytes, 0, out, 0, 32);
+        System.arraycopy(hBytes, 0, out, 32, 32);
+        return out;
+    }
+
+    public static byte[] verifyMode(File inFile, File sigFile, File keyFile) throws IOException {
+        byte[] message = Files.readAllBytes(inFile.toPath());
+        String sigHex = new String(Files.readAllBytes(sigFile.toPath())).replaceAll(" ", "");
+        byte[] sig = hexStringToByteArray(sigHex);
+        if (sig.length != 64) {
+            throw new IllegalArgumentException("Signature file must be exactly 64 bytes.");
+        }
+        byte[] zB = Arrays.copyOfRange(sig, 0, 32);
+        byte[] hB = Arrays.copyOfRange(sig, 32, 64);
+        BigInteger z = new BigInteger(1, zB);
+        BigInteger h = new BigInteger(1, hB);
+        String keyHex = new String(Files.readAllBytes(keyFile.toPath())).replaceAll(" ", "");
+        byte[] keyBytes = hexStringToByteArray(keyHex);
+        if (keyBytes.length != 33) {
+            throw new IllegalArgumentException("Key file must be exactly 33 bytes (y || xLSB).");
+        }
+        byte[] yBytes = Arrays.copyOfRange(keyBytes, 0, 32);
+        boolean xLsb = keyBytes[32] != 0;
+        Edwards E = new Edwards();
+        Edwards.Point V = E.getPoint(new BigInteger(1, yBytes), xLsb);
+        if (V.isZero()) {
+            throw new InvalidParameterException("Invalid public key.");
+        }
+        Schnorr schnorr = new Schnorr();
+        boolean ok = schnorr.verify(message, E, V, z, h);
+        return ok ? "VALID".getBytes(StandardCharsets.UTF_8) : "INVALID".getBytes(StandardCharsets.UTF_8);
+    }
+
+
+private static boolean constantTimeEquals(byte[] a, byte[] b) {
+    if (a.length != b.length) return false;
+    int v = 0;
+    for (int i = 0; i < a.length; i++) v |= (a[i] ^ b[i]);
+    return v == 0;
+}
+
 
     // Helper to convert hex string to byte array
     public static byte[] hexStringToByteArray(String s) {
@@ -757,6 +884,7 @@ public class Main {
     }
 
     // Helper to convert BigInteger to fixed 32-byte array
+    @SuppressWarnings("SameParameterValue")
     private static byte[] toFixedLengthBytes(BigInteger value, int length) {
         byte[] raw = value.toByteArray();
         byte[] fixed = new byte[length];

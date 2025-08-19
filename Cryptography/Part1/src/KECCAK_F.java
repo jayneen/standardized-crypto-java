@@ -174,7 +174,7 @@ public class KECCAK_F {
         if (input.length != 200)
             throw new IllegalArgumentException("State must be 200 bytes");
 
-        KECCAK_F kf = new KECCAK_F();
+        KECCAK_F2 kf = new KECCAK_F2();
 
         //Load the state from input
         for (int i = 0; i < 25; i++) {

@@ -12,7 +12,7 @@
 import java.security.InvalidParameterException;
 
 
-public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
+public class SHA3SHAKE extends KECCAK_F2 implements SHA3SHAKE_INTERFACE {
 
     /**
      * The Current State binary array
@@ -75,7 +75,7 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
             }
 
             if (messageChunkSize == rateBytes) {
-                MY_STATE = KECCAK_F.permutate(MY_STATE);
+                MY_STATE = KECCAK_F2.permutate(MY_STATE);
             }
 
             newPos += messageChunkSize;
@@ -102,7 +102,7 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
         while (outIterator < len) {
             if (SqueezeIterator == MY_RATE / 8) {
 
-                MY_STATE = KECCAK_F.permutate(MY_STATE);
+                MY_STATE = KECCAK_F2.permutate(MY_STATE);
 
                 SqueezeIterator = 0;
             }

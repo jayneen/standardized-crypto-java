@@ -1,7 +1,6 @@
 /**
  * Assignment 1
- * part: 1
- * 
+ * part: 2
  * This is an implementation of a cryptographic sponge used in SHA-3 and SHAKE algorithms
  * that utilizes Keccak permutations to encrypt data, compute hashes, and generate tags.
  *
@@ -12,7 +11,7 @@
 import java.security.InvalidParameterException;
 
 
-public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
+public class SHA3SHAKE2 extends KECCAK_F2 implements SHA3SHAKE2_INTERFACE{
 
     /**
      * The Current State binary array
@@ -29,7 +28,7 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
 
     private int SqueezeIterator;
 
-    public SHA3SHAKE() {
+    public SHA3SHAKE2() {
         SqueezeIterator = 0;
     }
 
@@ -75,7 +74,7 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
             }
 
             if (messageChunkSize == rateBytes) {
-                MY_STATE = KECCAK_F.permutate(MY_STATE);
+                MY_STATE = KECCAK_F2.permutate(MY_STATE);
             }
 
             newPos += messageChunkSize;
@@ -102,7 +101,7 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
         while (outIterator < len) {
             if (SqueezeIterator == MY_RATE / 8) {
 
-                MY_STATE = KECCAK_F.permutate(MY_STATE);
+                MY_STATE = KECCAK_F2.permutate(MY_STATE);
 
                 SqueezeIterator = 0;
             }
@@ -155,7 +154,7 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
         if (theSuffix != 224 && theSuffix != 256 && theSuffix != 384 && theSuffix != 512) {
             throw new IllegalArgumentException("Invalid suffix!");
         }
-        SHA3SHAKE sha3SHAKE = new SHA3SHAKE();
+        SHA3SHAKE2 sha3SHAKE = new SHA3SHAKE2();
         sha3SHAKE.init(theSuffix);
         theState = PADDING(theState, 0x06, sha3SHAKE.MY_RATE);
         return getBytes(theState, theSuffix, out, sha3SHAKE);
@@ -180,7 +179,7 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
             throw new IllegalArgumentException("Invalid suffix!");
         }
 
-        SHA3SHAKE sha3SHAKE = new SHA3SHAKE();
+        SHA3SHAKE2 sha3SHAKE = new SHA3SHAKE2();
         sha3SHAKE.init(theSuffix);
         theState = PADDING(theState, 0x1F, sha3SHAKE.MY_RATE);
         return getBytes(theState, len, out, sha3SHAKE);
@@ -244,7 +243,7 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
     }
 
     private static byte[] getBytes(byte[] theState, int len, byte[] out,
-                                   SHA3SHAKE sha3SHAKE) {
+                                   SHA3SHAKE2 sha3SHAKE) {
 
         sha3SHAKE.absorb(theState);
 
