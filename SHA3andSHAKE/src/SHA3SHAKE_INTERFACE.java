@@ -1,4 +1,4 @@
-public interface SHA3SHAKE2_INTERFACE {
+public interface SHA3SHAKE_INTERFACE {
 
     /**
      * Initialize the SHA-3/SHAKE sponge.

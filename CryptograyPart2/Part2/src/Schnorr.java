@@ -18,7 +18,7 @@ public class Schnorr {
      * Produce a Schnorr signature (z,h) for message using a private key
      * deterministically derived from the passphrase (per spec).
      *
-     * NOTE: Name kept as generateKeypair() to match existing Main.java usage.
+     * NOTE: Name kept as generateKeypair() to match existing Main2.java usage.
      */
     public Signature generateKeypair(byte[] message, Edwards curve, String passphrase) {
         final BigInteger r = curve.getR();
@@ -26,7 +26,7 @@ public class Schnorr {
 
         // ---- Private key from passphrase: s = SHAKE-128(passphrase,32B) mod r; enforce xLSB(V)==0
         byte[] sBytes = new byte[32];
-        SHA3SHAKE2.SHAKE(128, passphrase.getBytes(StandardCharsets.UTF_8), 256, sBytes);
+        SHA3SHAKE.SHAKE(128, passphrase.getBytes(StandardCharsets.UTF_8), 256, sBytes);
         BigInteger s = new BigInteger(1, sBytes).mod(r);
         Edwards.Point V = G.mul(s);
         if (V.getX().testBit(0)) {
@@ -43,7 +43,7 @@ public class Schnorr {
 
         byte[] hyInput = concat(toUnsignedFixed(U.y, 32), message);
         byte[] hDigest = new byte[32];
-        SHA3SHAKE2.SHA3(256, hyInput, hDigest);
+        SHA3SHAKE.SHA3(256, hyInput, hDigest);
         BigInteger h = new BigInteger(1, hDigest).mod(r);
 
         BigInteger z = k.subtract(h.multiply(s)).mod(r);
@@ -62,7 +62,7 @@ public class Schnorr {
 
         byte[] hyInput = concat(toUnsignedFixed(Uprime.y, 32), message);
         byte[] hDigest = new byte[32];
-        SHA3SHAKE2.SHA3(256, hyInput, hDigest);
+        SHA3SHAKE.SHA3(256, hyInput, hDigest);
         BigInteger hPrime = new BigInteger(1, hDigest).mod(r);
 
         return hPrime.equals(h.mod(r));

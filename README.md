@@ -11,7 +11,7 @@ A Java implementation of 128-bit symmetric and asymmetric encryption application
 ### How to Run:
 1) Navigate to the folder containing the desired source code
 2) Compile with: javac *.java
-3) Run with: java Main (or Main1 for older version)
+3) Run with: java Main2 (or Main1 for older version)
 
 ### Command Line Arguments:
 The program accepts up to four command line arguments in the order: input file path, output file path, pass phrase, key pair file. 

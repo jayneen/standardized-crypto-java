@@ -2,12 +2,12 @@
 /**
  * Assignment 1
  * part: 1
- *
+ * <p>
  * This is the main application using the SHA3SHAKE interface to provide four utility
  * modes: hash computation, tag generation, file encryption, and file decryption.
- * It accepts optional command line arguments in the order: input file path, output 
+ * It accepts optional command line arguments in the order: input file path, output
  * file path, and pass phrase. Do not use input files greater than ~2GB.
- * 
+ *
  * @author Kassie Whitney, Zane Swaims, Evgeniia Nemynova
  * @version 7.29.25
  */
@@ -29,20 +29,17 @@ public class Main1 {
 
     public static void main(String[] args) {
 
+        if (args.length < 3) {
+            System.out.println("Usage: java Main1 <inputFile> <outputFile> <passphrase>");
+            return;
+        }
+
+        String userInput = args[0];
+        String userOutput = args[1];
+        String passphrase = args[2];
+
         while (true) {
             isDecrypt = false;
-
-            String userInput = null; // file to read from
-            String userOutput = null; // file to write to (creates or overwrites)
-            String passphrase = null;
-
-            if (args.length > 0)
-                userInput = args[0];
-            if (args.length > 1)
-                userOutput = args[1];
-            if (args.length > 2)
-                passphrase = args[2];
-
             try {
                 // Select program mode or quit
                 String userMode;
@@ -65,27 +62,26 @@ public class Main1 {
                 }
 
                 // Apply mode
-                File inputFile = null;
+                File inputFile;
                 byte[] result;
                 switch (userMode) {
                     case "1":
-                        inputFile = new File(validateInputFile(input, userInput));
+                        inputFile = new File(requireExistingFile(userInput));
                         result = hashMode(inputFile);
                         break;
                     case "2":
-                        if (args.length > 0)
-                            inputFile = new File(validateInputFile(input, userInput));
-                        passphrase = validatePassphrase(input, passphrase);
+                        inputFile = new File(requireExistingFile(userInput));
+                        // passphrase = validatePassphrase(input, passphrase);
                         result = tagMode(inputFile, passphrase);
                         break;
                     case "3":
-                        inputFile = new File(validateInputFile(input, userInput));
-                        passphrase = validatePassphrase(input, passphrase);
+                        inputFile = new File(requireExistingFile(userInput));
+                        // passphrase = validatePassphrase(input, passphrase);
                         result = encryptMode(inputFile, passphrase);
                         break;
                     case "4":
-                        inputFile = new File(validateInputFile(input, userInput));
-                        passphrase = validatePassphrase(input, passphrase);
+                        inputFile = new File(requireExistingFile(userInput));
+                        // passphrase = validatePassphrase(input, passphrase);
                         result = decryptMode(inputFile, passphrase);
                         break;
                     default:
@@ -98,45 +94,46 @@ public class Main1 {
                 fileSize(result);
 
                 // Write output
-                final File finalDocument;
-                if (userOutput == null && !isDecrypt) {
-                    // Creating a new default file recursively
-                    finalDocument = checkFile(new File("EncryptedFile.txt"));
+                File finalDocument = new File(userOutput); // always use CLI output path
 
-                } else if (isDecrypt) {
-                    finalDocument = checkFile(new File("DecryptedFile.txt"));
-
-                } else {
-                    // Create or overwrite specified file
-
-                    finalDocument = new File(userOutput);
-                }
                 if (isDecrypt) {
+                    // write plaintext
                     String plaintext = new String(result, StandardCharsets.UTF_8);
-                    Files.writeString(finalDocument.toPath(), plaintext);
+                    Files.writeString(
+                            finalDocument.toPath(),
+                            plaintext,
+                            StandardOpenOption.CREATE,
+                            StandardOpenOption.TRUNCATE_EXISTING,
+                            StandardOpenOption.WRITE
+                    );
                     System.out.println("Decrypted plaintext written to: " + finalDocument.getName() + "\n");
                 } else {
+                    // Create or overwrite specified file
                     convertToHexAndWrite(finalDocument, result);
                 }
                 System.out.println("Wrote to " + finalDocument.getName() + "\n");
 
             } catch (NumberFormatException | InvalidParameterException | InvalidPathException
-                    | IOException invalidPathException) {
+                     | IOException invalidPathException) {
                 System.out.println("""
                         Invalid file path, contents, or pass phrase.
                         Please try again!
                         """);
                 // avoid softlock due to bad command line input
-                if (args.length > 0) {
-                    System.out.println("""
-                            Ending due to invalid command line file paths.
-                            """);
-                    return;
-                }
-                ;
+                System.out.println("""
+                        Ending due to invalid command line file paths.
+                        """);
+                return;
             }
         }
 
+    }
+
+    private static String requireExistingFile(String path) throws IOException {
+        if (path == null || path.isEmpty() || !Files.exists(new File(path).toPath())) {
+            throw new IOException("Input file not found: " + path);
+        }
+        return path;
     }
 
     /**
@@ -200,7 +197,7 @@ public class Main1 {
     }
 
     public static void convertToHexAndWrite(final File theFile,
-            final byte[] theEncryptedFile) {
+                                            final byte[] theEncryptedFile) {
         final StringBuilder sb = new StringBuilder(theEncryptedFile.length * 2);
 
         for (byte theFileByte : theEncryptedFile) {
@@ -219,7 +216,11 @@ public class Main1 {
         }
 
         try {
-            Files.writeString(theFile.toPath(), formattedHex + "\n", StandardOpenOption.APPEND);
+            Files.writeString(theFile.toPath(),
+                    formattedHex + System.lineSeparator(),
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.TRUNCATE_EXISTING,
+                    StandardOpenOption.WRITE);
         } catch (final IOException ioe) {
             System.out.println("Invalid File Path!");
         }
@@ -333,11 +334,15 @@ public class Main1 {
         int ShakeSecLevel = 0;
         while (true) {
             System.out.print("Please enter a security level for SHAKE (128,256) > ");
-            ShakeSecLevel = Integer.parseInt(input.nextLine());
-            if (!(ShakeSecLevel == 128 || ShakeSecLevel == 256)) {
+            try {
+                ShakeSecLevel = Integer.parseInt(input.nextLine());
+                if (!(ShakeSecLevel == 128 || ShakeSecLevel == 256)) {
+                    System.out.println("Invalid security level entered.");
+                } else {
+                    break;
+                }
+            } catch (NumberFormatException e) { // (added) handle non-numeric
                 System.out.println("Invalid security level entered.");
-            } else {
-                break;
             }
         }
 
@@ -352,7 +357,18 @@ public class Main1 {
 
             System.out.print("\n\nPlease designate the length of your MAC tag in bits > ");
 
-            len = Integer.parseInt(String.valueOf(input.nextLine()));
+            // (added) validate: positive and multiple of 8; re-prompt instead of recursing
+            while (true) {
+                try {
+                    len = Integer.parseInt(String.valueOf(input.nextLine()));
+                    if (len > 0 && (len % 8) == 0) break;
+                    System.out.println("\nThe length provided is invalid. Please try again.\n\n");
+                    System.out.print("Please designate the length of your MAC tag in bits > ");
+                } catch (NumberFormatException nfe) {
+                    System.out.println("\nThe length provided is invalid. Please try again.\n\n");
+                    System.out.print("Please designate the length of your MAC tag in bits > ");
+                }
+            }
 
             byte[] msgByte = message.getBytes(StandardCharsets.UTF_8);
             byte[] thePass = passPhrase.getBytes(StandardCharsets.UTF_8);
@@ -372,7 +388,18 @@ public class Main1 {
 
                 System.out.print("\n\nPlease designate the length of your MAC tag in bits > ");
 
-                len = Integer.parseInt(String.valueOf(input.nextLine()));
+                // (added) validate: positive and multiple of 8; re-prompt instead of recursing
+                while (true) {
+                    try {
+                        len = Integer.parseInt(String.valueOf(input.nextLine()));
+                        if (len > 0 && (len % 8) == 0) break;
+                        System.out.println("\nThe length provided is invalid. Please try again.\n\n");
+                        System.out.print("Please designate the length of your MAC tag in bits > ");
+                    } catch (final NumberFormatException nfe) {
+                        System.out.println("\nThe length provided is invalid. Please try again.\n\n");
+                        System.out.print("Please designate the length of your MAC tag in bits > ");
+                    }
+                }
 
                 byte[] theFile = Files.readAllBytes(inFile.toPath());
                 byte[] thePass = passPhrase.getBytes(StandardCharsets.UTF_8);
@@ -390,27 +417,19 @@ public class Main1 {
 
                 System.out.println("\nUnable to convert the file into a binary.");
 
-            } catch (final NumberFormatException nfe) {
-
-                System.out.println("\nThe length provided is invalid. Please try again.\n\n");
-                tagMode(inFile, passPhrase);
-
-            }
+            } /* removed recursion; we re-prompt above instead of calling tagMode(inFile, passPhrase) */
         }
 
-        if (kMac.length == 0 || len == 0) {
-            throw new InvalidParameterException("The length must be greater than 0!");
+        if (len <= 0 || (len & 7) != 0) {
+            throw new InvalidParameterException("The length must be a positive multiple of 8.");
         }
 
         System.out.println("Computing a SHAKE-" + ShakeSecLevel + " tag...");
-        switch (ShakeSecLevel) {
-            case 128:
-                shake = SHA3SHAKE.SHAKE(128, kMac, len, null);
-                break;
-            case 256:
-                shake = SHA3SHAKE.SHAKE(256, kMac, len, null);
-                break;
-        }
+        shake = switch (ShakeSecLevel) {
+            case 128 -> SHA3SHAKE.SHAKE(128, kMac, len, null);
+            case 256 -> SHA3SHAKE.SHAKE(256, kMac, len, null);
+            default -> shake;
+        };
 
         System.out.println("Outputting...");
 
@@ -441,7 +460,8 @@ public class Main1 {
         byte[] fileBytes = Files.readAllBytes(inFile.toPath());
 
         // 1) hashing the pass phrase with SHAKE-128 as the key
-        byte[] key = SHA3SHAKE.SHAKE(128, passPhrase.getBytes(StandardCharsets.UTF_8), 16, null);
+        byte[] key = SHA3SHAKE.SHAKE(128, passPhrase.getBytes(StandardCharsets.UTF_8), 128,
+                null);
 
         // 2) obtaining a random 128-bit nonce
         byte[] nonce = new byte[16];
@@ -517,7 +537,8 @@ public class Main1 {
         byte[] ciphertext = Arrays.copyOfRange(encryptedData, NONCE_LENGTH, encryptedData.length - MAC_LENGTH);
 
         // Derive key from passPhrase (SHAKE-128, 128 bits)
-        byte[] key = SHA3SHAKE.SHAKE(128, passPhrase.getBytes(StandardCharsets.UTF_8), 16, null);
+        byte[] key = SHA3SHAKE.SHAKE(128, passPhrase.getBytes(StandardCharsets.UTF_8), 128,
+                null);
 
         // Verify MAC = SHA3-256(key || ciphertext)
         byte[] macInput = new byte[key.length + ciphertext.length];

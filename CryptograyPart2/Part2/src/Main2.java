@@ -27,7 +27,7 @@ import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Scanner;
 
-public class Main {
+public class Main2 {
     private static final Scanner input = new Scanner(System.in);
     private static boolean isDecrypt = false;
 
@@ -375,13 +375,13 @@ public class Main {
         byte[] sha = new byte[0];
         try {
             sha = switch (ShaSecLevel) {
-                case 224 -> SHA3SHAKE2.SHA3(224, Files.readAllBytes(inFile.toPath()),
+                case 224 -> SHA3SHAKE.SHA3(224, Files.readAllBytes(inFile.toPath()),
                         null);
-                case 256 -> SHA3SHAKE2.SHA3(256, Files.readAllBytes(inFile.toPath()),
+                case 256 -> SHA3SHAKE.SHA3(256, Files.readAllBytes(inFile.toPath()),
                         null);
-                case 384 -> SHA3SHAKE2.SHA3(384, Files.readAllBytes(inFile.toPath()),
+                case 384 -> SHA3SHAKE.SHA3(384, Files.readAllBytes(inFile.toPath()),
                         null);
-                case 512 -> SHA3SHAKE2.SHA3(512, Files.readAllBytes(inFile.toPath()),
+                case 512 -> SHA3SHAKE.SHA3(512, Files.readAllBytes(inFile.toPath()),
                         null);
                 default -> sha;
             };
@@ -483,8 +483,8 @@ public class Main {
 
         System.out.println("Computing a SHAKE-" + ShakeSecLevel + " tag...");
         shake = switch (ShakeSecLevel) {
-            case 128 -> SHA3SHAKE2.SHAKE(128, kMac, len, null);
-            case 256 -> SHA3SHAKE2.SHAKE(256, kMac, len, null);
+            case 128 -> SHA3SHAKE.SHAKE(128, kMac, len, null);
+            case 256 -> SHA3SHAKE.SHAKE(256, kMac, len, null);
             default -> shake;
         };
 
@@ -517,7 +517,7 @@ public class Main {
         byte[] fileBytes = Files.readAllBytes(inFile.toPath());
 
         // 1) hashing the pass phrase with SHAKE-128 as the key
-        byte[] key = SHA3SHAKE2.SHAKE(128, passPhrase.getBytes(StandardCharsets.UTF_8), 16,
+        byte[] key = SHA3SHAKE.SHAKE(128, passPhrase.getBytes(StandardCharsets.UTF_8), 16,
                 null);
 
         // 2) obtaining a random 128-bit nonce
@@ -532,7 +532,7 @@ public class Main {
         System.arraycopy(nonce, 0, combinedData, 0, nonce.length);
         System.arraycopy(key, 0, combinedData, nonce.length, key.length);
 
-        SHA3SHAKE2 shake = new SHA3SHAKE2();
+        SHA3SHAKE shake = new SHA3SHAKE();
         shake.init(128);
         shake.absorb(combinedData);
         byte[] keystream = shake.squeeze(fileBytes.length);
@@ -548,7 +548,7 @@ public class Main {
         byte[] macInput = new byte[key.length + ciphertext.length];
         System.arraycopy(key, 0, macInput, 0, key.length);
         System.arraycopy(ciphertext, 0, macInput, key.length, ciphertext.length);
-        byte[] mac = SHA3SHAKE2.SHA3(256, macInput, null);
+        byte[] mac = SHA3SHAKE.SHA3(256, macInput, null);
 
         // Putting it together, nonce + ciphertext + mac
         byte[] output = new byte[nonce.length + ciphertext.length + mac.length];
@@ -598,14 +598,14 @@ public class Main {
         byte[] ciphertext = Arrays.copyOfRange(encryptedData, NONCE_LENGTH, encryptedData.length - MAC_LENGTH);
 
         // Derive key from passPhrase (SHAKE-128, 128 bits)
-        byte[] key = SHA3SHAKE2.SHAKE(128, passPhrase.getBytes(StandardCharsets.UTF_8), 16,
+        byte[] key = SHA3SHAKE.SHAKE(128, passPhrase.getBytes(StandardCharsets.UTF_8), 16,
                 null);
 
         // Verify MAC = SHA3-256(key || ciphertext)
         byte[] macInput = new byte[key.length + ciphertext.length];
         System.arraycopy(key, 0, macInput, 0, key.length);
         System.arraycopy(ciphertext, 0, macInput, key.length, ciphertext.length);
-        byte[] macComputed = SHA3SHAKE2.SHA3(256, macInput, null);
+        byte[] macComputed = SHA3SHAKE.SHA3(256, macInput, null);
 
         if (!Arrays.equals(mac, macComputed)) {
             throw new InvalidParameterException("***!Incorrect password!***");
@@ -618,7 +618,7 @@ public class Main {
             System.arraycopy(nonce, 0, combinedData, 0, nonce.length);
             System.arraycopy(key, 0, combinedData, nonce.length, key.length);
 
-            SHA3SHAKE2 shake = new SHA3SHAKE2();
+            SHA3SHAKE shake = new SHA3SHAKE();
             shake.init(128);
             shake.absorb(combinedData);
             byte[] keystream = shake.squeeze(ciphertext.length);
@@ -643,7 +643,7 @@ public class Main {
      */
     public static byte[] keyPairMode(String passphrase) {
         Edwards ed = new Edwards();
-        byte[] absorbedPass = SHA3SHAKE2.SHAKE(128,
+        byte[] absorbedPass = SHA3SHAKE.SHAKE(128,
                 passphrase.getBytes(StandardCharsets.UTF_8), 32 * 8, null);
         BigInteger s = new BigInteger(1, absorbedPass);
         s = s.mod(ed.getR());
@@ -692,17 +692,17 @@ public class Main {
         Edwards.Point W = V.mul(k);
         Edwards.Point Z = G.mul(k);
         byte[] yW = toFixedLength(W.y, 32);
-        byte[] kk = SHA3SHAKE2.SHAKE(256, yW, 64 * 8, null);
+        byte[] kk = SHA3SHAKE.SHAKE(256, yW, 64 * 8, null);
         byte[] k_a = Arrays.copyOfRange(kk, 0, 32);
         byte[] k_e = Arrays.copyOfRange(kk, 32, 64);
-        byte[] keystream = SHA3SHAKE2.SHAKE(128, k_e, m.length * 8, null);
+        byte[] keystream = SHA3SHAKE.SHAKE(128, k_e, m.length * 8, null);
         byte[] c = new byte[m.length];
         for (int i = 0; i < m.length; i++)
             c[i] = (byte) (m[i] ^ keystream[i]);
         byte[] macInput = new byte[k_a.length + c.length];
         System.arraycopy(k_a, 0, macInput, 0, k_a.length);
         System.arraycopy(c, 0, macInput, k_a.length, c.length);
-        byte[] t = SHA3SHAKE2.SHA3(256, macInput, null);
+        byte[] t = SHA3SHAKE.SHA3(256, macInput, null);
         byte[] yZ = toFixedLength(Z.y, 32);
         byte xlsbZ = (byte) (Z.getX().testBit(0) ? 1 : 0);
         ByteBuffer bb = ByteBuffer.allocate(32 + 1 + 4 + c.length + 32).order(ByteOrder.BIG_ENDIAN);
@@ -786,7 +786,7 @@ public class Main {
         Edwards E = new Edwards();
         BigInteger r = E.getR();
 
-        byte[] sBytesRaw = SHA3SHAKE2.SHAKE(128, passphrase.getBytes(StandardCharsets.UTF_8), 256, null);
+        byte[] sBytesRaw = SHA3SHAKE.SHAKE(128, passphrase.getBytes(StandardCharsets.UTF_8), 256, null);
         BigInteger s = new BigInteger(1, sBytesRaw).mod(r);
 
         Edwards.Point G = E.gen();
@@ -806,7 +806,7 @@ public class Main {
 
         // 5) k_a || k_e = SHAKE-256( y(W) ), 64 bytes total
         byte[] yW = toFixedLength(W.y, 32); // package-private y is accessible from default package
-        byte[] kk = SHA3SHAKE2.SHAKE(256, yW, 64 * 8, null);
+        byte[] kk = SHA3SHAKE.SHAKE(256, yW, 64 * 8, null);
         byte[] k_a = Arrays.copyOfRange(kk, 0, 32);
         byte[] k_e = Arrays.copyOfRange(kk, 32, 64);
 
@@ -814,13 +814,13 @@ public class Main {
         byte[] macInput = new byte[k_a.length + c.length];
         System.arraycopy(k_a, 0, macInput, 0, k_a.length);
         System.arraycopy(c, 0, macInput, k_a.length, c.length);
-        byte[] tPrime = SHA3SHAKE2.SHA3(256, macInput, null);
+        byte[] tPrime = SHA3SHAKE.SHA3(256, macInput, null);
         if (!constantTimeEquals(tPrime, t)) {
             throw new InvalidParameterException("*** Authentication failed (bad tag) ***");
         }
 
         // 7) Decrypt: m = c XOR SHAKE-128(k_e, |c|)
-        byte[] keystream = SHA3SHAKE2.SHAKE(128, k_e, c.length * 8, null);
+        byte[] keystream = SHA3SHAKE.SHAKE(128, k_e, c.length * 8, null);
         byte[] m = new byte[c.length];
         for (int i = 0; i < c.length; i++)
             m[i] = (byte) (c[i] ^ keystream[i]);

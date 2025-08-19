@@ -1,12 +1,12 @@
 /**
  * Assignment 1
- * part: 2
+ * part: 1
  *
  * This is a retrofitted version of Markku-Juhani O. Saarinen original C implementation,
  * but converted to Java. All credit goes to Saarinen, all we did was adjust it slightly
  * to work properly. Original implementation can be found here:
  *
- * <a href="https://github.com/mjosaarinen/tiny_sha3/blob/master/sha3.c">...</a>
+ * https://github.com/mjosaarinen/tiny_sha3/blob/master/sha3.c
  *
  * @author Markku-Juhani O. Saarinen <mjos@iki.fi>, Kassie Whitney, Zane Swaims, Evgeniia Nemynova
  * @version 7.19.25
@@ -15,7 +15,7 @@
  * Revised 03-Sep-15 for portability + OpenSSL - style API
  */
 
-public class KECCAK_F2 {
+public class KECCAK_F {
     private static final int KECCAKF_ROUNDS = 24;
 
     //Constants
@@ -50,7 +50,7 @@ public class KECCAK_F2 {
     private int bufferPos;
 
     //Full constructor (depreciated)
-    public KECCAK_F2(int outputBits) {
+    public KECCAK_F(int outputBits) {
         this.outputLength = outputBits / 8;
         this.capacity = outputBits * 2;
         this.rate = 200 - (capacity / 8);
@@ -59,7 +59,7 @@ public class KECCAK_F2 {
     }
 
     //Minimal constructor for permutation use only
-    public KECCAK_F2() {
+    public KECCAK_F() {
         //No buffer/rate setup needed for standalone permutation
     }
 
@@ -67,7 +67,7 @@ public class KECCAK_F2 {
         return (x << n) | (x >>> (64 - n));
     }
 
-    private void keccakf2() {
+    private void keccakf() {
         long[] bc = new long[5];
         long t;
 
@@ -84,7 +84,6 @@ public class KECCAK_F2 {
                     state[j + i] ^= t;
                 }
             }
-
 
             //Rho and Pi
             t = state[1];
@@ -108,7 +107,7 @@ public class KECCAK_F2 {
         }
     }
 
-    //(Depreciated)
+    @Deprecated
     public void update(byte[] input) {
         for (byte b : input) {
             buffer[bufferPos++] ^= b;
@@ -123,7 +122,7 @@ public class KECCAK_F2 {
         for (int i = 0; i < rate / 8; i++) {
             state[i] ^= toLongLE(buffer, i * 8);
         }
-        keccakf2();
+        keccakf();
     }
 
     /**
@@ -175,7 +174,7 @@ public class KECCAK_F2 {
         if (input.length != 200)
             throw new IllegalArgumentException("State must be 200 bytes");
 
-        KECCAK_F2 kf = new KECCAK_F2();
+        KECCAK_F kf = new KECCAK_F();
 
         //Load the state from input
         for (int i = 0; i < 25; i++) {
@@ -183,7 +182,7 @@ public class KECCAK_F2 {
         }
 
         //Perform permutation
-        kf.keccakf2();
+        kf.keccakf();
 
         //Convert back to byte array
         byte[] output = new byte[200];
