@@ -1,10 +1,10 @@
 import java.math.BigInteger;
 
 public class Edwards {
+    // TODO change p and d to private
+    public static final BigInteger P; // p = 2^256 - 189
 
-    private static final BigInteger P; // p = 2^256 - 189
-
-    private static final BigInteger D; // d = 15343
+    public static final BigInteger D; // d = 15343
 
     private final BigInteger r;
 
@@ -104,7 +104,8 @@ public class Edwards {
      * @return G.
      */
     public Point gen() {
-        final BigInteger y0 = P.subtract(BigInteger.valueOf(4)).mod(P);
+        // final BigInteger y0 = P.subtract(BigInteger.valueOf(4)).mod(P);
+        final BigInteger y0 = BigInteger.valueOf(-4).mod(P);
         return getPoint(y0, false);
     }
 
@@ -160,7 +161,8 @@ public class Edwards {
          * @param x the x-coordinate of the desired point
          * @param y the y-coordinate of the desired point
          */
-        private Point(BigInteger x, BigInteger y) {
+        // TODO change to private
+        public Point(BigInteger x, BigInteger y) {
             this.x = x.mod(P);
             this.y = y.mod(P);
             this.isZero = this.x.equals(BigInteger.ZERO) && this.y.equals(BigInteger.ONE);
