@@ -266,7 +266,7 @@ public class Main2 {
         }
 
         try {
-            Files.writeString(theFile.toPath(), formattedHex, StandardOpenOption.APPEND);
+            Files.writeString(theFile.toPath(), formattedHex, StandardOpenOption.CREATE);
         } catch (final IOException ioe) {
             System.out.println("Invalid File Path!");
         }
