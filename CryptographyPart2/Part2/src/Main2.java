@@ -395,6 +395,7 @@ public class Main2 {
         return sha;
     }
 
+    // TODO init and absorb sha3shake as per specs
     /**
      * Handles the second task of creating MAC tags of user specified length
      * for a user specified file and under a user specified pass phrase
@@ -409,7 +410,7 @@ public class Main2 {
     public static byte[] tagMode(File inFile, String passPhrase) {
 
         // prompt for security level and verify
-        int ShakeSecLevel;
+        int ShakeSecLevel = 0;
         while (true) {
             System.out.print("Please enter a security level for SHAKE (128,256) > ");
             ShakeSecLevel = Integer.parseInt(input.nextLine());
@@ -482,11 +483,14 @@ public class Main2 {
         }
 
         System.out.println("Computing a SHAKE-" + ShakeSecLevel + " tag...");
-        shake = switch (ShakeSecLevel) {
-            case 128 -> SHA3SHAKE.SHAKE(128, kMac, len, null);
-            case 256 -> SHA3SHAKE.SHAKE(256, kMac, len, null);
-            default -> shake;
-        };
+        switch (ShakeSecLevel) {
+            case 128:
+                shake = SHA3SHAKE.SHAKE(128, kMac, len, null);
+                break;
+            case 256:
+                shake = SHA3SHAKE.SHAKE(256, kMac, len, null);
+                break;
+        }
 
         System.out.println("Outputting...");
 
@@ -531,7 +535,7 @@ public class Main2 {
         shake.init(128);
         shake.absorb(nonce);
         shake.absorb(key);
-        
+
         byte[] keystream = shake.squeeze(fileBytes.length);
 
         System.out.println(Arrays.toString(keystream));
@@ -548,7 +552,7 @@ public class Main2 {
         System.arraycopy(ciphertext, 0, macInput, key.length, ciphertext.length);
         byte[] mac = SHA3SHAKE.SHA3(256, macInput, null);
 
-        // // Putting it together, nonce + ciphertext + mac
+        // Putting it together, nonce + ciphertext + mac
         byte[] output = new byte[nonce.length + ciphertext.length + mac.length];
         System.arraycopy(nonce, 0, output, 0, nonce.length);
         System.arraycopy(ciphertext, 0, output, nonce.length, ciphertext.length);
@@ -611,14 +615,10 @@ public class Main2 {
 
             // Generate keystream the same way as encryption (SHAKE-128 absorbs nonce then
             // key)
-            // Combine the nonce and key into a single message
-            byte[] combinedData = new byte[nonce.length + key.length];
-            System.arraycopy(nonce, 0, combinedData, 0, nonce.length);
-            System.arraycopy(key, 0, combinedData, nonce.length, key.length);
-
             SHA3SHAKE shake = new SHA3SHAKE();
             shake.init(128);
-            shake.absorb(combinedData);
+            shake.absorb(nonce);
+            shake.absorb(key);
             byte[] keystream = shake.squeeze(ciphertext.length);
 
             // XOR ciphertext with keystream to get plaintext
@@ -737,8 +737,8 @@ public class Main2 {
      * Combines the decryption and Schnorr verification tasks under
      * a provided public key.
      *
-     * @param inFile  user specified input file
-     * @param keyFile user specified public key containing file
+     * @param inFile     user specified input file
+     * @param keyFile    user specified public key containing file
      * @param passphrase user specified pass phrase used to generate the key file
      * @return decrypted message
      */
