@@ -1,6 +1,6 @@
 # asymmetric-crypto-java
 ## Description: 
-A Java implementation of 128-bit symmetric and asymmetric encryption applications. Part 1 provides symmetric cryptographic features based on an implementation of several SHA-3 and SHAKE inspired algorithms for hashing, tagging, encrypting, and decrypting. For part 1, we concatenated the outputted ciphertext as follows: nonce || ciphertext || MAC. Part 2 provides additional asymmetric features including custom implementations of ECIES and Schnorr inspired algorithms for signing, verifying, encrypting, and decrypting.
+A Java implementation of 128-bit symmetric and asymmetric encryption applications. Part 1 provides symmetric cryptographic features based on an implementation of several SHA-3 and SHAKE inspired algorithms for hashing, tagging, encrypting, and decrypting. Part 2 provides additional asymmetric features including custom implementations of ECIES and Schnorr inspired algorithms for signing, verifying, encrypting, and decrypting.
 
 ## Contributors:
 - Kassie Whitney
@@ -30,4 +30,7 @@ The pass phrase must match between encryption and decryption modes.
 7) Decrypts a file generated with the algorithm in mode 2 with the provided key pair and verifies its signature.
 
 ## Known bugs and Notes:
-Error messages due to invalid inputs are generic for all underlying exceptions.
+- Error messages due to invalid inputs are generic for all underlying exceptions.
+- When selecting security level, this does not use command line arguments and must be done manually.
+- For part 1, we concatenated the outputted ciphertext as follows: nonce || ciphertext || MAC
+
