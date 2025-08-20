@@ -33,4 +33,5 @@ The pass phrase must match between encryption and decryption modes.
 - Error messages due to invalid inputs are generic for all underlying exceptions.
 - When selecting security level, this does not use command line arguments and must be done manually.
 - For part 1, we concatenated the outputted ciphertext as follows: nonce || ciphertext || MAC
+- Invalid security level is handled via recursion, and thus if entered too many times incorrectly may crash the VM or cause sluggish run speeds.
 
