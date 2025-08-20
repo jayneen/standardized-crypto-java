@@ -1,3 +1,4 @@
+
 /**
  * Assignment 1
  * part: 1
@@ -9,7 +10,6 @@
  */
 
 import java.security.InvalidParameterException;
-
 
 public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
 
@@ -40,26 +40,29 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
 
     @Override
     public void init(int suffix) {
+        int absSuffix = Math.abs(suffix); // Use this for rate calculation
 
+        if (absSuffix == 128 || absSuffix == 224 || absSuffix == 256 || absSuffix == 384 || absSuffix == 512) {
 
-        if (suffix == 128 || suffix == 224 || suffix == 256 || suffix == 384 || suffix == 512) {
-
-            MY_RATE = 1600 - (suffix * 2);
+            MY_RATE = 1600 - (absSuffix * 2);
             MY_STATE = new byte[200];
             absorbPos = 0;
-            modeDomain = (suffix == 128 || suffix == 256) ? 0x1F : 0x06;
+
+            // If negative, it's SHAKE mode → use 0x1F; otherwise SHA3 → 0x06
+            modeDomain = (suffix < 0) ? 0x1F : 0x06;
+
             finalized = false;
             SqueezeIterator = 0;
+
         } else {
             throw new InvalidParameterException("""
-                    The SHA-3 security level must be either
-                    224, 256, 384, or 512.
-                    
-                    The SHAKE security level must be either
-                    128, or 256.
+                        The SHA-3 security level must be either
+                        224, 256, 384, or 512.
+
+                        The SHAKE security level must be either
+                        128, or 256.
                     """);
         }
-
     }
 
     private void finalizeAbsorb() {
@@ -131,7 +134,7 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
 
         int outIterator = 0;
 
-        //Here we loop through our
+        // Here we loop through our
         while (outIterator < len) {
             if (SqueezeIterator == rate) {
 
@@ -142,7 +145,7 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
 
             int chunk = Math.min(rate - SqueezeIterator, len - outIterator);
 
-            //This nifty loop is copying over stuff from our state to our output buffer
+            // This nifty loop is copying over stuff from our state to our output buffer
             if (chunk > 0) {
                 System.arraycopy(MY_STATE, SqueezeIterator, out, outIterator, chunk);
             }
@@ -183,7 +186,8 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
      *
      * @param theSuffix desired output length in bits (one of 224, 256, 384, 512)
      * @param theState  data to be hashed
-     * @param out       hash value buffer (if null, this method allocates it with the required size)
+     * @param out       hash value buffer (if null, this method allocates it with
+     *                  the required size)
      * @return the out buffer containing the desired hash value.
      */
     public static byte[] SHA3(int theSuffix, byte[] theState, byte[] out) {
@@ -197,9 +201,9 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
         return getBytes(theState, theSuffix, out, sha3SHAKE);
     }
 
-
     /**
-     * Compute the streamlined SHAKE-<128,256> on input theState with output bit-length len.
+     * Compute the streamlined SHAKE-<128,256> on input theState with output
+     * bit-length len.
      * <p>
      * Static Method.
      * <p>
@@ -207,7 +211,8 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
      * @param theSuffix desired security level (either 128 or 256)
      * @param theState  data to be hashed
      * @param len       desired output length in bits (must be a multiple of 8)
-     * @param out       hash value buffer (if null, this method allocates it with the required size)
+     * @param out       hash value buffer (if null, this method allocates it with
+     *                  the required size)
      * @return the out buffer containing the desired hash value.
      */
     static byte[] SHAKE(int theSuffix, byte[] theState, int len, byte[] out) {
@@ -226,9 +231,9 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
         return getBytes(theState, len, out, sha3SHAKE);
     }
 
-
     /**
-     * Pads the remaining bytes that are less than the rate in bytes within accordance to the
+     * Pads the remaining bytes that are less than the rate in bytes within
+     * accordance to the
      * SHA3 and SHAKE padding requirements.
      *
      * @param theState      The message from the user.
@@ -239,7 +244,8 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
         int rate = MY_RATE / 8;
         int remainderBytes = theState.length % rate;
 
-        // if remainderBytes is 0 set it as rate, else get the difference of rate and remainder
+        // if remainderBytes is 0 set it as rate, else get the difference of rate and
+        // remainder
         int pad = (remainderBytes == 0) ? rate : (rate - remainderBytes);
 
         byte[] out = java.util.Arrays.copyOf(theState, theState.length + pad);
@@ -252,7 +258,7 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
     }
 
     private static byte[] getBytes(byte[] theState, int len, byte[] out,
-                                   SHA3SHAKE sha3SHAKE) {
+            SHA3SHAKE sha3SHAKE) {
 
         sha3SHAKE.absorb(theState);
 
@@ -266,9 +272,7 @@ public class SHA3SHAKE extends KECCAK_F implements SHA3SHAKE_INTERFACE {
         }
         sha3SHAKE.squeeze(out, len / 8);
 
-
         return out;
     }
-
 
 }

@@ -483,12 +483,19 @@ public class Main2 {
         }
 
         System.out.println("Computing a SHAKE-" + ShakeSecLevel + " tag...");
+        SHA3SHAKE shaker = new SHA3SHAKE();
         switch (ShakeSecLevel) {
             case 128:
-                shake = SHA3SHAKE.SHAKE(128, kMac, len, null);
+                // shake = SHA3SHAKE.SHAKE(128, kMac, len, null);
+                shaker.init(-128);
+                shaker.absorb(kMac);
+                shake = shaker.squeeze(len / 8);
                 break;
             case 256:
-                shake = SHA3SHAKE.SHAKE(256, kMac, len, null);
+                // shake = SHA3SHAKE.SHAKE(256, kMac, len, null);
+                shaker.init(-256);
+                shaker.absorb(kMac);
+                shake = shaker.squeeze(len / 8);
                 break;
         }
 
@@ -532,7 +539,7 @@ public class Main2 {
         // 3) hashing the nonce and the key using SHAKE-128 as a stream cipher (nonce +
         // key)
         SHA3SHAKE shake = new SHA3SHAKE();
-        shake.init(128);
+        shake.init(-128);
         shake.absorb(nonce);
         shake.absorb(key);
 
@@ -547,10 +554,17 @@ public class Main2 {
 
         // (bonus: include a MAC tag using SHA-3-256 and the same key) (key +
         // ciphertext)
-        byte[] macInput = new byte[key.length + ciphertext.length];
-        System.arraycopy(key, 0, macInput, 0, key.length);
-        System.arraycopy(ciphertext, 0, macInput, key.length, ciphertext.length);
-        byte[] mac = SHA3SHAKE.SHA3(256, macInput, null);
+        // byte[] macInput = new byte[key.length + ciphertext.length];
+        // System.arraycopy(key, 0, macInput, 0, key.length);
+        // System.arraycopy(ciphertext, 0, macInput, key.length, ciphertext.length);
+
+        // byte[] mac = SHA3SHAKE.SHA3(256, macInput, null);
+
+        SHA3SHAKE sha = new SHA3SHAKE();
+        sha.init(256);
+        sha.absorb(key);
+        sha.absorb(ciphertext);
+        byte[] mac = sha.digest();
 
         // Putting it together, nonce + ciphertext + mac
         byte[] output = new byte[nonce.length + ciphertext.length + mac.length];
@@ -604,10 +618,16 @@ public class Main2 {
                 null);
 
         // Verify MAC = SHA3-256(key || ciphertext)
-        byte[] macInput = new byte[key.length + ciphertext.length];
-        System.arraycopy(key, 0, macInput, 0, key.length);
-        System.arraycopy(ciphertext, 0, macInput, key.length, ciphertext.length);
-        byte[] macComputed = SHA3SHAKE.SHA3(256, macInput, null);
+        // byte[] macInput = new byte[key.length + ciphertext.length];
+        // System.arraycopy(key, 0, macInput, 0, key.length);
+        // System.arraycopy(ciphertext, 0, macInput, key.length, ciphertext.length);
+        // byte[] macComputed = SHA3SHAKE.SHA3(256, macInput, null);
+
+        SHA3SHAKE sha = new SHA3SHAKE();
+        sha.init(256);
+        sha.absorb(key);
+        sha.absorb(ciphertext);
+        byte[] macComputed = sha.digest();
 
         if (!Arrays.equals(mac, macComputed)) {
             throw new InvalidParameterException("***!Incorrect password!***");
@@ -616,7 +636,7 @@ public class Main2 {
             // Generate keystream the same way as encryption (SHAKE-128 absorbs nonce then
             // key)
             SHA3SHAKE shake = new SHA3SHAKE();
-            shake.init(128);
+            shake.init(-128);
             shake.absorb(nonce);
             shake.absorb(key);
             byte[] keystream = shake.squeeze(ciphertext.length);
@@ -644,7 +664,7 @@ public class Main2 {
         // byte[] absorbedPass = SHA3SHAKE.SHAKE(128,
         // passphrase.getBytes(StandardCharsets.UTF_8), 32 * 8, null);
         SHA3SHAKE shake = new SHA3SHAKE();
-        shake.init(128);
+        shake.init(-128);
         shake.absorb(passphrase.getBytes(StandardCharsets.UTF_8));
         byte[] absorbedPass = shake.squeeze(32);
 
@@ -727,12 +747,12 @@ public class Main2 {
 
         // byte[] t = SHA3SHAKE.SHA3(256, macInput, null);
         SHA3SHAKE shake = new SHA3SHAKE();
-        shake.init(256);
+        shake.init(-256);
         shake.absorb(W.y.toByteArray());
         byte[] ka = shake.squeeze(32);
         byte[] ke = shake.squeeze(32);
 
-        shake.init(128);
+        shake.init(-128);
         shake.absorb(ke);
         byte[] mask = shake.squeeze(m.length);
         byte[] c = new byte[m.length];
@@ -756,7 +776,12 @@ public class Main2 {
         // The '256' is the desired output length in bits for SHA3-256.
         // 'combinedMessage' is the data to be hashed.
         // 'null' for the output buffer means the method will allocate a new one.
-        byte[] t = SHA3SHAKE.SHA3(256, combinedMessage, null);
+
+        // byte[] t = SHA3SHAKE.SHA3(256, combinedMessage, null);
+        shake.init(256);
+        shake.absorb(ka);
+        shake.absorb(c);
+        byte[] t = shake.digest();
 
         System.out.println("W: " + W);
         System.out.println("Z: " + Z);
@@ -820,7 +845,7 @@ public class Main2 {
 
         Edwards.Point W = Z.mul(S);
         SHA3SHAKE shake = new SHA3SHAKE();
-        shake.init(256);
+        shake.init(-256);
         shake.absorb(W.y.toByteArray());
         byte[] ka = shake.squeeze(32);
         byte[] ke = shake.squeeze(32);
@@ -828,9 +853,14 @@ public class Main2 {
         byte[] combinedMessage = new byte[ka.length + c.length];
         System.arraycopy(ka, 0, combinedMessage, 0, ka.length);
         System.arraycopy(c, 0, combinedMessage, ka.length, c.length);
-        byte[] tp = SHA3SHAKE.SHA3(256, combinedMessage, null);
 
-        shake.init(128);
+        // byte[] tp = SHA3SHAKE.SHA3(256, combinedMessage, null);
+        shake.init(256);
+        shake.absorb(ka);
+        shake.absorb(c);
+        byte[] tp = shake.digest();
+
+        shake.init(-128);
         shake.absorb(ke);
         byte[] temp = shake.squeeze(c.length);
 
@@ -841,7 +871,7 @@ public class Main2 {
         // TODO prints out in decimal and errors on file writing
         System.out.println(Arrays.toString(m));
 
-        if(tp != t){
+        if (tp != t) {
             throw new InvalidParameterException("Decryption Error.");
         }
 
