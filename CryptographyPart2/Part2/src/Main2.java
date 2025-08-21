@@ -2,7 +2,6 @@
 /*
   Assignment 1
   part: 2
-  <p>
   This is the main application using SHA3, SHAKE, ECIES, and Schnorr inspired algorithms
   to provide seven utility modes: hash computation, tag generation, symmetric file
   encryption and decryption, key pair generation, and asymmetric encryption and decryption.
@@ -10,18 +9,14 @@
   file path, and pass phrase. Do not use input files greater than ~2GB.
 
   @author Kassie Whitney, Zane Swaims, Evgeniia Nemynova
- * @version 9.8.25
+ * @version 20.8.25
  */
 
 import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.InvalidPathException;
-import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.security.InvalidParameterException;
 import java.security.SecureRandom;
@@ -117,7 +112,7 @@ public class Main2 {
                         inputFile = new File(validateInputFile(input, userInput));
                         keyFile = new File(validateKeyFile(input, userKey));
                         passphrase = validatePassphrase(input, passphrase);
-                        result = asymmetricEncryptMode(inputFile, keyFile, passphrase);
+                        twoDResult = asymmetricEncryptMode(inputFile, keyFile, passphrase);
                         break;
                     case "7":
                         isDecrypt = true;
@@ -172,14 +167,13 @@ public class Main2 {
                     System.out.println("Decrypted plaintext written to: " + finalDocument.getName() + "\n");
                 } else {
                     if (twoDResult == null) {
-                        convertToHexAndWrite(finalDocument, new byte[][]{result});
+                        convertToHexAndWrite(finalDocument, new byte[][] { result });
                     }
                     convertToHexAndWrite(finalDocument, twoDResult);
                 }
                 System.out.println("Wrote to " + finalDocument.getName() + "\n");
 
-            } catch (NumberFormatException | InvalidParameterException | InvalidPathException
-                    | IOException invalidPathException) {
+            } catch (IOException invalidPathException) {
                 System.out.println("""
                         Invalid file path, contents, or pass phrase.
                         Please try again!
@@ -409,7 +403,6 @@ public class Main2 {
         return sha;
     }
 
-    // TODO init and absorb sha3shake as per specs
     /**
      * Handles the second task of creating MAC tags of user specified length
      * for a user specified file and under a user specified pass phrase
@@ -614,7 +607,7 @@ public class Main2 {
         hexString = hexString.replaceAll("\\s+", "");
 
         // Convert hex string to byte array
-        byte[] encryptedData = hexStringToByteArray(hexString);
+        byte[] encryptedData = hexStringToByteArray(hexString.strip());
 
         final int NONCE_LENGTH = 16;
         final int MAC_LENGTH = 32;
@@ -680,8 +673,6 @@ public class Main2 {
 
         shake.absorb(passphrase.getBytes(StandardCharsets.UTF_8));
         byte[] absorbedPass = shake.squeeze(32);
-        // byte[] absorbedPass = new byte[32];
-        // SHA3SHAKE.SHAKE(128, passphrase.getBytes(StandardCharsets.UTF_8), 256, absorbedPass);
         BigInteger s = new BigInteger(1, absorbedPass);
         s = s.mod(ed.getR());
 
@@ -723,16 +714,25 @@ public class Main2 {
      * @param keyFile user specified public key containing file
      * @return the cryptogram
      */
-    @SuppressWarnings("unused")
-    public static byte[] asymmetricEncryptMode(File inFile, File keyFile, String passphrase) throws IOException {
+    public static byte[][] asymmetricEncryptMode(File inFile, File keyFile, String passphrase) throws IOException {
         Edwards E = new Edwards();
-        Edwards.Point V = E.gen()
-                .mul(new BigInteger("16665465170803196137237183189757970819661769527195913594111126976751630942579"));
+        // Edwards.Point V = E.gen()
+        // .mul(new
+        // BigInteger("16665465170803196137237183189757970819661769527195913594111126976751630942579"));
+        List<String> inLines = Files.readAllLines(keyFile.toPath());
+        // reconstruct V
+        byte[] xBytes = hexStringToByteArray(inLines.get(0).strip());
+        byte[] yBytes = hexStringToByteArray(inLines.get(1).strip());
+        BigInteger x = new BigInteger(xBytes);
+        BigInteger y = new BigInteger(yBytes);
+        Edwards.Point V = new Edwards.Point(x, y);
 
         byte[] m = Files.readAllBytes(inFile.toPath());
-        int rbytes = (E.getR().bitLength() + 7) >> 3;
-        byte[] seed = new SecureRandom().generateSeed(rbytes << 1);
-        BigInteger k = BigInteger.TWO;
+        byte[] kBytes = new byte[32];
+        SecureRandom secureRandom = new SecureRandom();
+        secureRandom.nextBytes(kBytes);
+        BigInteger k = new BigInteger(kBytes);
+        k = k.mod(E.getR());
 
         Edwards.Point G = E.gen();
         Edwards.Point W = V.mul(k);
@@ -744,13 +744,25 @@ public class Main2 {
         byte[] ka = shake.squeeze(32);
         byte[] ke = shake.squeeze(32);
 
+        // bonus: sign
+        Schnorr schnorr = new Schnorr();
+        Schnorr.Signature sign = schnorr.generateKeypair(m, E, passphrase);
+        byte[] h = sign.h.toByteArray();
+        byte[] z = sign.z.toByteArray();
+
         shake.init(-128);
         shake.absorb(ke);
-        byte[] mask = shake.squeeze(m.length);
-        byte[] c = new byte[m.length];
+        byte[] mask = shake.squeeze(m.length + h.length + z.length);
+        byte[] c = new byte[m.length + h.length + z.length];
 
         for (int i = 0; i < m.length; i++)
             c[i] = (byte) (m[i] ^ mask[i]);
+
+        for (int i = 0; i < h.length; i++)
+            c[i + m.length] = (byte) (h[i] ^ mask[i + m.length]);
+
+        for (int i = 0; i < z.length; i++)
+            c[i + m.length + h.length] = (byte) (z[i] ^ mask[i + m.length + h.length]);
 
         SHA3SHAKE sha = new SHA3SHAKE();
         sha.init(256);
@@ -758,43 +770,24 @@ public class Main2 {
         sha.absorb(c);
         byte[] t = sha.digest();
 
+        byte[][] out = { Z.getX().toByteArray(),
+                Z.y.toByteArray(),
+                c,
+                t };
+
         System.out.println("W: " + W);
+        System.out.println("k: " + k);
+        System.out.println("V: " + V);
         System.out.println("Z: " + Z);
         System.out.println("ka: " + Arrays.toString(ka));
         System.out.println("ke: " + Arrays.toString(ke));
         System.out.println("c: " + Arrays.toString(c));
         System.out.println("t: " + Arrays.toString(t));
+        System.out.println("m: " + Arrays.toString(m));
+        System.out.println("BigInteger h: " + sign.h);
+        System.out.println("BigInteger z: " + sign.z);
 
-        byte[] yZ = toFixedLength(Z.y, 32);
-        byte xlsbZ = (byte) (Z.getX().testBit(0) ? 1 : 0);
-        ByteBuffer bb = ByteBuffer.allocate(32 + 1 + 4 + c.length + 32).order(ByteOrder.BIG_ENDIAN);
-        bb.put(yZ);
-        bb.put(xlsbZ);
-        bb.putInt(c.length);
-        bb.put(c);
-        bb.put(t);
-        return bb.array();
-    }
-
-    // Helper to convert BigInteger to fixed-length byte array (big-endian),
-    // left-padded with zeros
-    @SuppressWarnings("SameParameterValue")
-    private static byte[] toFixedLength(BigInteger value, int length) {
-        byte[] raw = value.toByteArray();
-        if (raw.length == length) {
-            return raw;
-        } else if (raw.length > length) {
-            // BigInteger byte array can have leading zero for sign, so trim if needed
-            int start = raw.length - length;
-            byte[] trimmed = new byte[length];
-            System.arraycopy(raw, start, trimmed, 0, length);
-            return trimmed;
-        } else {
-            // pad with leading zeros
-            byte[] padded = new byte[length];
-            System.arraycopy(raw, 0, padded, length - raw.length, raw.length);
-            return padded;
-        }
+        return out;
     }
 
     /**
@@ -806,28 +799,47 @@ public class Main2 {
      * @param passphrase user specified pass phrase used to generate the key file
      * @return decrypted message
      */
-    @SuppressWarnings("unused")
-    public static byte[] asymmetricDecryptMode(File inFile, File keyFile, String passphrase) {
-        // TODO un-hardcode this
+    public static byte[] asymmetricDecryptMode(File inFile, File keyFile, String passphrase) throws IOException {
         Edwards ed = new Edwards();
-        BigInteger zx = new BigInteger("9437071788689923860285188864243445848829034305114716688925961299686472351778");
-        BigInteger zy = new BigInteger("33335288469882025483739701342541534780286781789447071287975993879306170570424");
-        Edwards.Point Z = new Edwards.Point(zx, zy);
-        byte[] c = { 94, 117, 3 };
-        byte[] t = { -101, 9, -55, 20, 47, 20, -12, 92, -2, 0, 70, 123, -106, -99, -22, 120, -74, 95, -28, -37, -50,
-                -121, -53, 109, -122, 69, 45, 23, 126, 40, 67, -25 };
-        BigInteger S = new BigInteger("16665465170803196137237183189757970819661769527195913594111126976751630942579");
+        List<String> inLines = Files.readAllLines(inFile.toPath());
+        // reconstruct Z
+        byte[] xBytes = hexStringToByteArray(inLines.get(0).strip());
+        byte[] yBytes = hexStringToByteArray(inLines.get(1).strip());
+        BigInteger x = new BigInteger(xBytes);
+        BigInteger y = new BigInteger(yBytes);
+        Edwards.Point Z = new Edwards.Point(x, y);
+        // reconstruct c
+        byte[] c = hexStringToByteArray(inLines.get(2).strip());
+        // reconstruct t
+        byte[] t = hexStringToByteArray(inLines.get(3).strip());
+
+        System.out.println("Z: " + Z);
+
+        // reconstruct s
+        SHA3SHAKE shake = new SHA3SHAKE();
+        shake.init(-128);
+        shake.absorb(passphrase.getBytes(StandardCharsets.UTF_8));
+        byte[] absorbedPass = shake.squeeze(32);
+        BigInteger S = new BigInteger(1, absorbedPass);
+        S = S.mod(ed.getR());
+
+        // BigInteger zx = new
+        // BigInteger("9437071788689923860285188864243445848829034305114716688925961299686472351778");
+        // BigInteger zy = new
+        // BigInteger("33335288469882025483739701342541534780286781789447071287975993879306170570424");
+        // Edwards.Point Z = new Edwards.Point(zx, zy);
+        // byte[] c = { 94, 117, 3 };
+        // byte[] t = { -101, 9, -55, 20, 47, 20, -12, 92, -2, 0, 70, 123, -106, -99,
+        // -22, 120, -74, 95, -28, -37, -50,
+        // -121, -53, 109, -122, 69, 45, 23, 126, 40, 67, -25 };
+        // BigInteger S = new
+        // BigInteger("16665465170803196137237183189757970819661769527195913594111126976751630942579");
 
         Edwards.Point W = Z.mul(S);
-        SHA3SHAKE shake = new SHA3SHAKE();
         shake.init(-256);
         shake.absorb(W.y.toByteArray());
         byte[] ka = shake.squeeze(32);
         byte[] ke = shake.squeeze(32);
-
-        byte[] combinedMessage = new byte[ka.length + c.length];
-        System.arraycopy(ka, 0, combinedMessage, 0, ka.length);
-        System.arraycopy(c, 0, combinedMessage, ka.length, c.length);
 
         SHA3SHAKE sha = new SHA3SHAKE();
         sha.init(256);
@@ -843,10 +855,22 @@ public class Main2 {
         for (int i = 0; i < c.length; i++)
             m[i] = (byte) (c[i] ^ temp[i]);
 
-        // TODO prints out in decimal and errors on file writing
-        System.out.println(Arrays.toString(m));
+        // bonus: verify
+        byte[] slice = Arrays.copyOfRange(m, 2, m.length);
+        BigInteger num = new BigInteger(slice);
+        System.out.println("BigInteger signature: " + num);
 
-        if (tp != t) {
+        System.out.println("Decrypted message: " + Arrays.toString(m));
+
+        if (tp.equals(t)) {
+            System.out.println("W: " + W);
+            System.out.println("Z: " + Z);
+            System.out.println("ka: " + Arrays.toString(ka));
+            System.out.println("ke: " + Arrays.toString(ke));
+            System.out.println("c: " + Arrays.toString(c));
+            System.out.println("tp: " + Arrays.toString(tp));
+            System.out.println("t: " + Arrays.toString(t));
+            System.out.println("m: " + Arrays.toString(m));
             throw new InvalidParameterException("Decryption Error.");
         }
 
@@ -870,16 +894,16 @@ public class Main2 {
 
         // read public key
         List<String> keyLines = Files.readAllLines(keyFile.toPath());
-        byte[] xBytes = hexStringToByteArray(keyLines.get(0));
-        byte[] yBytes = hexStringToByteArray(keyLines.get(1));
+        byte[] xBytes = hexStringToByteArray(keyLines.get(0).strip());
+        byte[] yBytes = hexStringToByteArray(keyLines.get(1).strip());
         BigInteger x = new BigInteger(xBytes);
         BigInteger y = new BigInteger(yBytes);
         Edwards.Point V = new Edwards.Point(x, y);
 
         // read signature
         List<String> signLines = Files.readAllLines(signFile.toPath());
-        byte[] hBytes = hexStringToByteArray(signLines.get(0));
-        byte[] zBytes = hexStringToByteArray(signLines.get(1));
+        byte[] hBytes = hexStringToByteArray(signLines.get(0).strip());
+        byte[] zBytes = hexStringToByteArray(signLines.get(1).strip());
         BigInteger h = new BigInteger(hBytes);
         BigInteger z = new BigInteger(zBytes);
 
@@ -889,17 +913,9 @@ public class Main2 {
         return ok ? "VALID".getBytes(StandardCharsets.UTF_8) : "INVALID".getBytes(StandardCharsets.UTF_8);
     }
 
-    private static boolean constantTimeEquals(byte[] a, byte[] b) {
-        if (a.length != b.length)
-            return false;
-        int v = 0;
-        for (int i = 0; i < a.length; i++)
-            v |= (a[i] ^ b[i]);
-        return v == 0;
-    }
-
     // Helper to convert hex string to byte array
     public static byte[] hexStringToByteArray(String s) {
+        s = s.strip().replace(" ", "");
         int len = s.length();
         if (len % 2 != 0) {
             throw new IllegalArgumentException("Hex string must have even length");
@@ -910,22 +926,6 @@ public class Main2 {
                     + Character.digit(s.charAt(i + 1), 16));
         }
         return data;
-    }
-
-    // Helper to convert BigInteger to fixed 32-byte array
-    @SuppressWarnings("SameParameterValue")
-    private static byte[] toFixedLengthBytes(BigInteger value, int length) {
-        byte[] raw = value.toByteArray();
-        byte[] fixed = new byte[length];
-
-        if (raw.length > length) {
-            // Truncate leading zero byte if present
-            System.arraycopy(raw, raw.length - length, fixed, 0, length);
-        } else {
-            System.arraycopy(raw, 0, fixed, length - raw.length, raw.length);
-        }
-
-        return fixed;
     }
 
 }
