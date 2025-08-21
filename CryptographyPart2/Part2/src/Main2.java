@@ -680,6 +680,8 @@ public class Main2 {
 
         shake.absorb(passphrase.getBytes(StandardCharsets.UTF_8));
         byte[] absorbedPass = shake.squeeze(32);
+        // byte[] absorbedPass = new byte[32];
+        // SHA3SHAKE.SHAKE(128, passphrase.getBytes(StandardCharsets.UTF_8), 256, absorbedPass);
         BigInteger s = new BigInteger(1, absorbedPass);
         s = s.mod(ed.getR());
 
