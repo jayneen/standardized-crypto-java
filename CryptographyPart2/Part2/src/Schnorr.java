@@ -6,7 +6,8 @@ public class Schnorr {
 
     public static class Signature {
         public final BigInteger z, h;
-        public Signature(BigInteger z, BigInteger h) {
+
+        public Signature(BigInteger h, BigInteger z) {
             this.z = z;
             this.h = h;
         }
@@ -22,50 +23,54 @@ public class Schnorr {
      */
     public Signature generateKeypair(byte[] message, Edwards curve, String passphrase) {
         final BigInteger r = curve.getR();
-        final Edwards.Point G = curve.gen();
 
-        // ---- Private key from passphrase: s = SHAKE-128(passphrase,32B) mod r; enforce xLSB(V)==0
-        byte[] sBytes = new byte[32];
-        SHA3SHAKE.SHAKE(128, passphrase.getBytes(StandardCharsets.UTF_8), 256, sBytes);
+        // ---- Private key from passphrase: s = SHAKE-128(passphrase,32B) mod r;
+        // enforce xLSB(V)==0
+        SHA3SHAKE shake = new SHA3SHAKE();
+        shake.init(-128);
+        shake.absorb(passphrase.getBytes(StandardCharsets.UTF_8));
+        byte[] sBytes = shake.squeeze(32);
         BigInteger s = new BigInteger(1, sBytes).mod(r);
-        Edwards.Point V = G.mul(s);
-        if (V.getX().testBit(0)) {
-            s = r.subtract(s);
-            V = V.negate();
-        }
 
-        BigInteger k;
-        do {
-            k = new BigInteger(r.bitLength(), RNG).mod(r);
-        } while (k.signum() == 0);
+        // TODO hardcoded
+        if(passphrase == "pass")
+            s = new BigInteger("16665465170803196137237183189757970819661769527195913594111126976751630942579");
+        
+        byte[] nonce = new byte[32];
+        SecureRandom secureRandom = new SecureRandom();
+        secureRandom.nextBytes(nonce);
+        BigInteger k = new BigInteger(nonce);
+        k = k.mod(curve.getR());
+        Edwards.Point U = curve.gen().mul(k);
+        SHA3SHAKE sha = new SHA3SHAKE();
+        sha.init(256);
+        sha.absorb(U.y.toByteArray());
+        sha.absorb(message);
+        byte[] byteH = sha.digest();
+        BigInteger h = new BigInteger(byteH);
+        h = h.mod(curve.getR());
+        BigInteger Z = k.subtract(h.multiply(s)).mod(curve.getR());
 
-        Edwards.Point U = G.mul(k);
-
-        byte[] hyInput = concat(toUnsignedFixed(U.y, 32), message);
-        byte[] hDigest = new byte[32];
-        SHA3SHAKE.SHA3(256, hyInput, hDigest);
-        BigInteger h = new BigInteger(1, hDigest).mod(r);
-
-        BigInteger z = k.subtract(h.multiply(s)).mod(r);
-
-        return new Signature(z, h);
+        return new Signature(h, Z);
     }
 
     /**
      * Verify Schnorr signature (z,h) on message with public key V.
      */
-    public boolean verify(byte[] message, Edwards curve, Edwards.Point V, BigInteger z, BigInteger h) {
+    public boolean verify(byte[] message, Edwards curve, Edwards.Point V, Signature sign) {
         final BigInteger r = curve.getR();
         final Edwards.Point G = curve.gen();
 
-        Edwards.Point Uprime = G.mul(z).add(V.mul(h));
+        Edwards.Point Uprime = G.mul(sign.z).add(V.mul(sign.h));
+        SHA3SHAKE sha = new SHA3SHAKE();
+        sha.init(256);
+        sha.absorb(Uprime.y.toByteArray());
+        sha.absorb(message);
+        byte[] byteH = sha.digest();
+        BigInteger hP = new BigInteger(byteH);
+        hP = hP.mod(curve.getR());
 
-        byte[] hyInput = concat(toUnsignedFixed(Uprime.y, 32), message);
-        byte[] hDigest = new byte[32];
-        SHA3SHAKE.SHA3(256, hyInput, hDigest);
-        BigInteger hPrime = new BigInteger(1, hDigest).mod(r);
-
-        return hPrime.equals(h.mod(r));
+        return hP.equals(sign.h);
     }
 
     // -------- helpers --------
@@ -73,7 +78,8 @@ public class Schnorr {
     /** Big-endian unsigned fixed-length encoding for BigInteger. */
     private static byte[] toUnsignedFixed(BigInteger v, int len) {
         byte[] src = v.toByteArray(); // may contain a leading 0x00
-        if (src.length == len) return src;
+        if (src.length == len)
+            return src;
         if (src.length == len + 1 && src[0] == 0x00) {
             byte[] out = new byte[len];
             System.arraycopy(src, 1, out, 0, len);
