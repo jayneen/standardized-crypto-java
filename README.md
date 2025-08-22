@@ -28,5 +28,5 @@ The pass phrase must match between encryption and decryption modes.
 
 ## Known bugs and Notes:
 - Desired security levels cannot be specified via command line and are prompted for during runtime.
-- Encrypted ciphertext adheres to the following format: nonce || ciphertext || MAC
+- Encrypted ciphertext adheres to the following format: nonce || ciphertext || MAC.
 - Invalid security level is handled via recursion, and thus if it is incorrectly entered too many times may crash the VM or cause sluggish run speeds.
