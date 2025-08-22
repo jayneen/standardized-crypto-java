@@ -9,31 +9,13 @@
  * file path, and pass phrase. Do not use input files greater than ~2GB.
  *
  * @author Kassie Whitney, Zane Swaims, Evgeniia Nemynova
- * @version 7.29.25
- */
-
-/*
-  Assignment 1
-  part: 2
-  <p>
-  This is the main application using SHA3, SHAKE, ECIES, and Schnorr inspired algorithms
-  to provide seven utility modes: hash computation, tag generation, symmetric file
-  encryption and decryption, key pair generation, and asymmetric encryption and decryption.
-  It accepts optional command line arguments in the order: input file path, output
-  file path, and pass phrase. Do not use input files greater than ~2GB.
-
-  @author Kassie Whitney, Zane Swaims, Evgeniia Nemynova
- * @version 9.8.25
+ * @version 8.21.25
  */
 
 import java.io.File;
 import java.io.IOException;
-import java.math.BigInteger;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.InvalidPathException;
 import java.nio.file.StandardOpenOption;
 import java.security.InvalidParameterException;
 import java.security.SecureRandom;
@@ -74,7 +56,9 @@ public class Main {
                         2 - to compute tags
                         3 - to encrypt a file
                         4 - to decrypt a file
+
                         Q - to quit the program
+
                         """);
 
                 userMode = input.nextLine().replace("\"", "");
@@ -85,8 +69,9 @@ public class Main {
 
                 // Apply mode
                 File inputFile = null;
-                File keyFile;
-                byte[] result;
+                File keyFile = null;
+                byte[] result = null;
+                byte[][] twoDResult = null;
                 switch (userMode) {
                     case "1":
                         inputFile = new File(validateInputFile(input, userInput));
@@ -137,12 +122,11 @@ public class Main {
                     Files.writeString(finalDocument.toPath(), plaintext);
                     System.out.println("Decrypted plaintext written to: " + finalDocument.getName() + "\n");
                 } else {
-                    convertToHexAndWrite(finalDocument, result);
+                    convertToHexAndWrite(finalDocument, new byte[][] { result });
                 }
                 System.out.println("Wrote to " + finalDocument.getName() + "\n");
 
-            } catch (NumberFormatException | InvalidParameterException | InvalidPathException
-                    | IOException invalidPathException) {
+            } catch (IOException invalidPathException) {
                 System.out.println("""
                         Invalid file path, contents, or pass phrase.
                         Please try again!
@@ -220,12 +204,16 @@ public class Main {
     }
 
     public static void convertToHexAndWrite(final File theFile,
-            final byte[] theEncryptedFile) {
-        final StringBuilder sb = new StringBuilder(theEncryptedFile.length * 2);
+            final byte[][] theEncryptedFile) {
+        final StringBuilder sb = new StringBuilder();
 
-        for (byte theFileByte : theEncryptedFile) {
-            sb.append(String.format("%02x", theFileByte));
+        for (byte[] part : theEncryptedFile) {
+            for (byte theFileByte : part) {
+                sb.append(String.format("%02x", theFileByte));
+            }
+            sb.append("\n");
         }
+        sb.setLength(sb.length() - 1); // remove the last \n
 
         String rawHex = sb.toString();
 
@@ -239,7 +227,8 @@ public class Main {
         }
 
         try {
-            Files.writeString(theFile.toPath(), formattedHex, StandardOpenOption.CREATE);
+            Files.writeString(theFile.toPath(), formattedHex, 
+            StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
         } catch (final IOException ioe) {
             System.out.println("Invalid File Path!");
         }
@@ -368,8 +357,6 @@ public class Main {
         return sha;
     }
 
-    // TODO init and absorb sha3shake as per specs
-    // TODO fix recursion
     /**
      * Handles the second task of creating MAC tags of user specified length
      * for a user specified file and under a user specified pass phrase
@@ -404,7 +391,7 @@ public class Main {
             System.out.print("\n\nPlease enter a message: > ");
             String message = input.nextLine();
 
-            System.out.print("\n\nPlease designate the length of your MAC tag in bits > ");
+            System.out.print("\n\nPlease designate the length of your MAC tag in bytes > ");
 
             len = Integer.parseInt(String.valueOf(input.nextLine()));
 
@@ -424,7 +411,7 @@ public class Main {
 
             try {
 
-                System.out.print("\n\nPlease designate the length of your MAC tag in bits > ");
+                System.out.print("\n\nPlease designate the length of your MAC tag in bytes > ");
 
                 len = Integer.parseInt(String.valueOf(input.nextLine()));
 
@@ -457,12 +444,19 @@ public class Main {
         }
 
         System.out.println("Computing a SHAKE-" + ShakeSecLevel + " tag...");
+        SHA3SHAKE shaker = new SHA3SHAKE();
         switch (ShakeSecLevel) {
             case 128:
-                shake = SHA3SHAKE.SHAKE(128, kMac, len, null);
+                // shake = SHA3SHAKE.SHAKE(128, kMac, len, null);
+                shaker.init(-128);
+                shaker.absorb(kMac);
+                shake = shaker.squeeze(len);
                 break;
             case 256:
-                shake = SHA3SHAKE.SHAKE(256, kMac, len, null);
+                // shake = SHA3SHAKE.SHAKE(256, kMac, len, null);
+                shaker.init(-256);
+                shaker.absorb(kMac);
+                shake = shaker.squeeze(len);
                 break;
         }
 
@@ -506,7 +500,7 @@ public class Main {
         // 3) hashing the nonce and the key using SHAKE-128 as a stream cipher (nonce +
         // key)
         SHA3SHAKE shake = new SHA3SHAKE();
-        shake.init(128);
+        shake.init(-128);
         shake.absorb(nonce);
         shake.absorb(key);
 
@@ -521,10 +515,17 @@ public class Main {
 
         // (bonus: include a MAC tag using SHA-3-256 and the same key) (key +
         // ciphertext)
-        byte[] macInput = new byte[key.length + ciphertext.length];
-        System.arraycopy(key, 0, macInput, 0, key.length);
-        System.arraycopy(ciphertext, 0, macInput, key.length, ciphertext.length);
-        byte[] mac = SHA3SHAKE.SHA3(256, macInput, null);
+        // byte[] macInput = new byte[key.length + ciphertext.length];
+        // System.arraycopy(key, 0, macInput, 0, key.length);
+        // System.arraycopy(ciphertext, 0, macInput, key.length, ciphertext.length);
+
+        // byte[] mac = SHA3SHAKE.SHA3(256, macInput, null);
+
+        SHA3SHAKE sha = new SHA3SHAKE();
+        sha.init(256);
+        sha.absorb(key);
+        sha.absorb(ciphertext);
+        byte[] mac = sha.digest();
 
         // Putting it together, nonce + ciphertext + mac
         byte[] output = new byte[nonce.length + ciphertext.length + mac.length];
@@ -560,7 +561,7 @@ public class Main {
         hexString = hexString.replaceAll("\\s+", "");
 
         // Convert hex string to byte array
-        byte[] encryptedData = hexStringToByteArray(hexString);
+        byte[] encryptedData = hexStringToByteArray(hexString.strip());
 
         final int NONCE_LENGTH = 16;
         final int MAC_LENGTH = 32;
@@ -578,10 +579,16 @@ public class Main {
                 null);
 
         // Verify MAC = SHA3-256(key || ciphertext)
-        byte[] macInput = new byte[key.length + ciphertext.length];
-        System.arraycopy(key, 0, macInput, 0, key.length);
-        System.arraycopy(ciphertext, 0, macInput, key.length, ciphertext.length);
-        byte[] macComputed = SHA3SHAKE.SHA3(256, macInput, null);
+        // byte[] macInput = new byte[key.length + ciphertext.length];
+        // System.arraycopy(key, 0, macInput, 0, key.length);
+        // System.arraycopy(ciphertext, 0, macInput, key.length, ciphertext.length);
+        // byte[] macComputed = SHA3SHAKE.SHA3(256, macInput, null);
+
+        SHA3SHAKE sha = new SHA3SHAKE();
+        sha.init(256);
+        sha.absorb(key);
+        sha.absorb(ciphertext);
+        byte[] macComputed = sha.digest();
 
         if (!Arrays.equals(mac, macComputed)) {
             throw new InvalidParameterException("***!Incorrect password!***");
@@ -590,7 +597,7 @@ public class Main {
             // Generate keystream the same way as encryption (SHAKE-128 absorbs nonce then
             // key)
             SHA3SHAKE shake = new SHA3SHAKE();
-            shake.init(128);
+            shake.init(-128);
             shake.absorb(nonce);
             shake.absorb(key);
             byte[] keystream = shake.squeeze(ciphertext.length);
@@ -605,9 +612,9 @@ public class Main {
         return plaintext;
     }
 
-  
     // Helper to convert hex string to byte array
     public static byte[] hexStringToByteArray(String s) {
+        s = s.strip().replace(" ", "");
         int len = s.length();
         if (len % 2 != 0) {
             throw new IllegalArgumentException("Hex string must have even length");
@@ -620,6 +627,4 @@ public class Main {
         return data;
     }
 
-  
 }
-
