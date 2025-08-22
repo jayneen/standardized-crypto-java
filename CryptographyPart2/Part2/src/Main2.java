@@ -45,7 +45,7 @@ public class Main2 {
             if (args.length > 2)
                 passphrase = args[2];
             if (args.length > 3)
-                userKey = args[2];
+                userKey = args[3];
 
             try {
                 // Select program mode or quit
@@ -675,9 +675,11 @@ public class Main2 {
         shake.init(-128);
 
         shake.absorb(passphrase.getBytes(StandardCharsets.UTF_8));
-        byte[] absorbedPass = shake.squeeze(32);
-        BigInteger s = new BigInteger(1, absorbedPass);
+        byte[] absorbedPass = shake.squeeze(64);
+        // System.out.println("absorbedPass hex: " + bytesToHex(absorbedPass));
+        BigInteger s = new BigInteger(absorbedPass);
         s = s.mod(ed.getR());
+        System.out.println("absorbedPass: " + Arrays.toString(absorbedPass));
 
         // s = new
         // BigInteger("16665465170803196137237183189757970819661769527195913594111126976751630942579");
@@ -687,7 +689,6 @@ public class Main2 {
             s = ed.getR().subtract(s);
             V = V.negate();
         }
-        System.out.println("Mask: " + Arrays.toString(absorbedPass));
 
         System.out.println("Gen: " + ed.gen());
         System.out.println("r * G: " + ed.gen().mul(ed.getR()));
@@ -827,7 +828,7 @@ public class Main2 {
         SHA3SHAKE shake = new SHA3SHAKE();
         shake.init(-128);
         shake.absorb(passphrase.getBytes(StandardCharsets.UTF_8));
-        byte[] absorbedPass = shake.squeeze(32);
+        byte[] absorbedPass = shake.squeeze(64);
         BigInteger S = new BigInteger(1, absorbedPass);
         S = S.mod(ed.getR());
 
