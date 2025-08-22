@@ -131,7 +131,7 @@ public class Main2 {
                         inputFile = new File(validateInputFile(input, userInput));
                         File sigFile = new File(validateSignatureFile(input, null));
                         keyFile = new File(validateKeyFile(input, userKey));
-                        result = verifyMode(inputFile, sigFile, keyFile);
+                        result = verifyMode(inputFile, keyFile, sigFile);
                         break;
                     default:
                         System.out.println("Invalid mode entered. Please select a valid mode.\n");
@@ -168,8 +168,10 @@ public class Main2 {
                 } else {
                     if (twoDResult == null) {
                         convertToHexAndWrite(finalDocument, new byte[][] { result });
+                    } else{
+                        convertToHexAndWrite(finalDocument, twoDResult);
                     }
-                    convertToHexAndWrite(finalDocument, twoDResult);
+                    
                 }
                 System.out.println("Wrote to " + finalDocument.getName() + "\n");
 
@@ -274,7 +276,8 @@ public class Main2 {
         }
 
         try {
-            Files.writeString(theFile.toPath(), formattedHex, StandardOpenOption.CREATE);
+            Files.writeString(theFile.toPath(), formattedHex, 
+            StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
         } catch (final IOException ioe) {
             System.out.println("Invalid File Path!");
         }
@@ -437,7 +440,7 @@ public class Main2 {
             System.out.print("\n\nPlease enter a message: > ");
             String message = input.nextLine();
 
-            System.out.print("\n\nPlease designate the length of your MAC tag in bits > ");
+            System.out.print("\n\nPlease designate the length of your MAC tag in bytes > ");
 
             len = Integer.parseInt(String.valueOf(input.nextLine()));
 
@@ -457,7 +460,7 @@ public class Main2 {
 
             try {
 
-                System.out.print("\n\nPlease designate the length of your MAC tag in bits > ");
+                System.out.print("\n\nPlease designate the length of your MAC tag in bytes > ");
 
                 len = Integer.parseInt(String.valueOf(input.nextLine()));
 
@@ -496,13 +499,13 @@ public class Main2 {
                 // shake = SHA3SHAKE.SHAKE(128, kMac, len, null);
                 shaker.init(-128);
                 shaker.absorb(kMac);
-                shake = shaker.squeeze(len / 8);
+                shake = shaker.squeeze(len);
                 break;
             case 256:
                 // shake = SHA3SHAKE.SHAKE(256, kMac, len, null);
                 shaker.init(-256);
                 shaker.absorb(kMac);
-                shake = shaker.squeeze(len / 8);
+                shake = shaker.squeeze(len);
                 break;
         }
 
@@ -684,6 +687,7 @@ public class Main2 {
             s = ed.getR().subtract(s);
             V = V.negate();
         }
+        System.out.println("Mask: " + Arrays.toString(absorbedPass));
 
         System.out.println("Gen: " + ed.gen());
         System.out.println("r * G: " + ed.gen().mul(ed.getR()));
@@ -696,7 +700,7 @@ public class Main2 {
         System.out.println("r: " + ed.getR());
         System.out.println("s: " + s);
         System.out.println("V: " + V);
-        System.out.println("P: " + ed.P);
+        System.out.println("P: " + ed.getP());
 
         byte[] x = V.getX().toByteArray();
         byte[] y = V.y.toByteArray();
@@ -725,7 +729,8 @@ public class Main2 {
         byte[] yBytes = hexStringToByteArray(inLines.get(1).strip());
         BigInteger x = new BigInteger(xBytes);
         BigInteger y = new BigInteger(yBytes);
-        Edwards.Point V = new Edwards.Point(x, y);
+        Edwards.Point V = E.createPoint(x, y);
+        // Edwards.Point V = new Edwards.Point(x, y);
 
         byte[] m = Files.readAllBytes(inFile.toPath());
         byte[] kBytes = new byte[32];
@@ -752,17 +757,19 @@ public class Main2 {
 
         shake.init(-128);
         shake.absorb(ke);
-        byte[] mask = shake.squeeze(m.length + h.length + z.length);
-        byte[] c = new byte[m.length + h.length + z.length];
+        // byte[] mask = shake.squeeze(m.length + h.length + z.length);
+        byte[] mask = shake.squeeze(m.length);
+        // byte[] c = new byte[m.length + h.length + z.length];
+        byte[] c = new byte[m.length];
 
         for (int i = 0; i < m.length; i++)
             c[i] = (byte) (m[i] ^ mask[i]);
 
-        for (int i = 0; i < h.length; i++)
-            c[i + m.length] = (byte) (h[i] ^ mask[i + m.length]);
+        // for (int i = 0; i < h.length; i++)
+        //     c[i + m.length] = (byte) (h[i] ^ mask[i + m.length]);
 
-        for (int i = 0; i < z.length; i++)
-            c[i + m.length + h.length] = (byte) (z[i] ^ mask[i + m.length + h.length]);
+        // for (int i = 0; i < z.length; i++)
+        //     c[i + m.length + h.length] = (byte) (z[i] ^ mask[i + m.length + h.length]);
 
         SHA3SHAKE sha = new SHA3SHAKE();
         sha.init(256);
@@ -807,7 +814,8 @@ public class Main2 {
         byte[] yBytes = hexStringToByteArray(inLines.get(1).strip());
         BigInteger x = new BigInteger(xBytes);
         BigInteger y = new BigInteger(yBytes);
-        Edwards.Point Z = new Edwards.Point(x, y);
+        Edwards.Point Z = ed.createPoint(x, y);
+        // Edwards.Point Z = new Edwards.Point(x, y);
         // reconstruct c
         byte[] c = hexStringToByteArray(inLines.get(2).strip());
         // reconstruct t
@@ -891,14 +899,22 @@ public class Main2 {
 
     public static byte[] verifyMode(File inFile, File keyFile, File signFile) throws IOException {
         byte[] message = Files.readAllBytes(inFile.toPath());
-
+        Edwards E = new Edwards();
         // read public key
-        List<String> keyLines = Files.readAllLines(keyFile.toPath());
-        byte[] xBytes = hexStringToByteArray(keyLines.get(0).strip());
-        byte[] yBytes = hexStringToByteArray(keyLines.get(1).strip());
+        // List<String> keyLines = Files.readAllLines(keyFile.toPath());
+        // byte[] xBytes = hexStringToByteArray(keyLines.get(0).strip());
+        // byte[] yBytes = hexStringToByteArray(keyLines.get(1).strip());
+        // BigInteger x = new BigInteger(xBytes);
+        // BigInteger y = new BigInteger(yBytes);
+        // Edwards.Point V = E.createPoint(x, y);
+        List<String> inLines = Files.readAllLines(keyFile.toPath());
+        // reconstruct V
+        byte[] xBytes = hexStringToByteArray(inLines.get(0).strip());
+        byte[] yBytes = hexStringToByteArray(inLines.get(1).strip());
         BigInteger x = new BigInteger(xBytes);
         BigInteger y = new BigInteger(yBytes);
-        Edwards.Point V = new Edwards.Point(x, y);
+        Edwards.Point V = E.createPoint(x, y);
+        // Edwards.Point V = new Edwards.Point(x, y);
 
         // read signature
         List<String> signLines = Files.readAllLines(signFile.toPath());
@@ -907,7 +923,6 @@ public class Main2 {
         BigInteger h = new BigInteger(hBytes);
         BigInteger z = new BigInteger(zBytes);
 
-        Edwards E = new Edwards();
         Schnorr schnorr = new Schnorr();
         boolean ok = schnorr.verify(message, E, V, new Schnorr.Signature(h, z));
         return ok ? "VALID".getBytes(StandardCharsets.UTF_8) : "INVALID".getBytes(StandardCharsets.UTF_8);
