@@ -2,14 +2,13 @@ import java.math.BigInteger;
 
 public class Edwards {
     // TODO change p and d to private
-    public static final BigInteger P; // p = 2^256 - 189
+    private static final BigInteger P; // p = 2^256 - 189
 
-    public static final BigInteger D; // d = 15343
+    private static final BigInteger D; // d = 15343
 
     private final BigInteger r;
 
-
-    //Initialize the Prime modulus and the curve parameter
+    // Initialize the Prime modulus and the curve parameter
     static {
         P = BigInteger.ONE.shiftLeft(256).subtract(BigInteger.valueOf(189));
 
@@ -35,20 +34,21 @@ public class Edwards {
         final BigInteger x2 = x.multiply(x).mod(P);
         final BigInteger y2 = y.multiply(y).mod(P);
         final BigInteger leftHandSide = x2.add(y2).mod(P);
-        final BigInteger rightHandSide =
-                BigInteger.ONE.add(D.multiply(x2).mod(P).multiply(y2).mod(P)).mod(P);
+        final BigInteger rightHandSide = BigInteger.ONE.add(D.multiply(x2).mod(P).multiply(y2).mod(P)).mod(P);
 
         return leftHandSide.equals(rightHandSide);
     }
 
     /**
-     * Create a point from its y-coordinate and the least significant bit (LSB) of its
+     * Create a point from its y-coordinate and the least significant bit (LSB) of
+     * its
      * x-coordinate.
      *
      * @param y        the y-coordinate of the desired point.
      * @param x_hasLSB the LSB of its x-coordinate
-     * @return point (x,y) if it exists and has order r, otherwise the neutral element O =
-     * (0,1)
+     * @return point (x,y) if it exists and has order r, otherwise the neutral
+     *         element O =
+     *         (0,1)
      */
     public Point getPoint(BigInteger y, Boolean x_hasLSB) {
         y = y.mod(P);
@@ -61,7 +61,7 @@ public class Edwards {
             return new Point();
         }
 
-        //Will be used to take the square root of to recover x from y
+        // Will be used to take the square root of to recover x from y
         final BigInteger value = num.multiply(den.modInverse(P)).mod(P);
 
         final BigInteger x = sqrt(value, P, x_hasLSB);
@@ -70,7 +70,7 @@ public class Edwards {
             return new Point();
         }
 
-        //The point class
+        // The point class
         final Point pnt = new Point(x, y);
 
         // Enforce *exact* prime order r:
@@ -98,7 +98,8 @@ public class Edwards {
     }
 
     /**
-     * Fine a generator G on the curve with the smallest possible y-coordinate in absoulte
+     * Fine a generator G on the curve with the smallest possible y-coordinate in
+     * absoulte
      * value.
      *
      * @return G.
@@ -110,9 +111,9 @@ public class Edwards {
     }
 
     public static BigInteger sqrt(BigInteger value, BigInteger p, boolean hasLSB) {
-        //assert p mod 4 == 3
+        // assert p mod 4 == 3
 
-        //Checks if the first 2 bits are 1, if not throw exception
+        // Checks if the first 2 bits are 1, if not throw exception
         if (!(p.testBit(0) && p.testBit(1))) {
             throw new IllegalArgumentException("p % 4 != 3");
         }
@@ -131,9 +132,25 @@ public class Edwards {
         return r.multiply(r).subtract(value).mod(p).signum() == 0 ? r : null;
     }
 
-    //getter for schnorr
+    // getter for schnorr
     public BigInteger getR() {
         return r;
+    }
+
+    public BigInteger getP() {
+        return P;
+    }
+
+    public BigInteger getD() {
+        return D;
+    }
+
+    public Point createPoint(BigInteger x, BigInteger y) {
+        if (isPoint(x, y)) {
+            return new Point(x, y);
+        } else {
+            throw new IllegalArgumentException("Invalid point: does not lie on the Edwards curve");
+        }
     }
 
     public static class Point {
@@ -142,7 +159,8 @@ public class Edwards {
         final BigInteger y;
         private final boolean isZero;
 
-        // private static final BigInteger P = BigInteger.valueOf(2).pow(256).subtract(BigInteger.valueOf(189));
+        // private static final BigInteger P =
+        // BigInteger.valueOf(2).pow(256).subtract(BigInteger.valueOf(189));
         // private static final BigInteger D = BigInteger.valueOf(15343);
 
         /**
@@ -161,8 +179,7 @@ public class Edwards {
          * @param x the x-coordinate of the desired point
          * @param y the y-coordinate of the desired point
          */
-        // TODO change to private
-        public Point(BigInteger x, BigInteger y) {
+        private Point(BigInteger x, BigInteger y) {
             this.x = x.mod(P);
             this.y = y.mod(P);
             this.isZero = this.x.equals(BigInteger.ZERO) && this.y.equals(BigInteger.ONE);
@@ -263,16 +280,20 @@ public class Edwards {
             return result;
         }
 
-        //getter for schnorr
+        // getter for schnorr
         public BigInteger getX() {
             return x;
+        }
+
+        public BigInteger getY() {
+            return y;
         }
 
         /**
          * Display a human-readable representation of this point.
          *
          * @return a string of form "(x, y)" where x and y are
-         * the coordinates of this point
+         *         the coordinates of this point
          */
         public String toString() {
             return "(" + x.toString() + ", " + y.toString() + ")";
