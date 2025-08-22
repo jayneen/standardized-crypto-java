@@ -37,6 +37,7 @@ public class Main2 {
             String userOutput = null; // file to write to (creates or overwrites)
             String passphrase = null;
             String userKey = null; // file containing public key
+            String userSign = null; // file containing signature to verify
 
             if (args.length > 0)
                 userInput = args[0];
@@ -46,6 +47,8 @@ public class Main2 {
                 passphrase = args[2];
             if (args.length > 3)
                 userKey = args[3];
+            if (args.length > 4)
+                userSign = args[4];
 
             try {
                 // Select program mode or quit
@@ -80,6 +83,7 @@ public class Main2 {
                 // Apply mode
                 File inputFile = null;
                 File keyFile = null;
+                File signFile = null;
                 byte[] result = null;
                 byte[][] twoDResult = null;
                 switch (userMode) {
@@ -129,9 +133,9 @@ public class Main2 {
                     case "9":
                         isDecrypt = true;
                         inputFile = new File(validateInputFile(input, userInput));
-                        File sigFile = new File(validateSignatureFile(input, null));
+                        signFile = new File(validateSignatureFile(input, userSign));
                         keyFile = new File(validateKeyFile(input, userKey));
-                        result = verifyMode(inputFile, keyFile, sigFile);
+                        result = verifyMode(inputFile, keyFile, signFile);
                         break;
                     default:
                         System.out.println("Invalid mode entered. Please select a valid mode.\n");
