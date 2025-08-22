@@ -505,8 +505,6 @@ public class Main {
         shake.absorb(key);
 
         byte[] keystream = shake.squeeze(fileBytes.length);
-
-        System.out.println(Arrays.toString(keystream));
         // Encrypting, ciphertext = plaintext XOR (step 3)
         byte[] ciphertext = new byte[fileBytes.length];
         for (int i = 0; i < fileBytes.length; i++) {

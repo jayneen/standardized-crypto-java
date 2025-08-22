@@ -559,7 +559,7 @@ public class Main2 {
 
         byte[] keystream = shake.squeeze(fileBytes.length);
 
-        System.out.println(Arrays.toString(keystream));
+        // System.out.println(Arrays.toString(keystream));
         // Encrypting, ciphertext = plaintext XOR (step 3)
         byte[] ciphertext = new byte[fileBytes.length];
         for (int i = 0; i < fileBytes.length; i++) {
@@ -683,7 +683,7 @@ public class Main2 {
         // System.out.println("absorbedPass hex: " + bytesToHex(absorbedPass));
         BigInteger s = new BigInteger(absorbedPass);
         s = s.mod(ed.getR());
-        System.out.println("absorbedPass: " + Arrays.toString(absorbedPass));
+        // System.out.println("absorbedPass: " + Arrays.toString(absorbedPass));
 
         // s = new
         // BigInteger("16665465170803196137237183189757970819661769527195913594111126976751630942579");
@@ -694,18 +694,18 @@ public class Main2 {
             V = V.negate();
         }
 
-        System.out.println("Gen: " + ed.gen());
-        System.out.println("r * G: " + ed.gen().mul(ed.getR()));
-        System.out.println("s * G: " + ed.gen()
-                .mul(new BigInteger("16665465170803196137237183189757970819661769527195913594111126976751630942579")));
+        // System.out.println("Gen: " + ed.gen());
+        // System.out.println("r * G: " + ed.gen().mul(ed.getR()));
+        // System.out.println("s * G: " + ed.gen()
+        //         .mul(new BigInteger("16665465170803196137237183189757970819661769527195913594111126976751630942579")));
 
-        System.out.println(BigInteger.ONE.shiftLeft(254).subtract(new BigInteger(
-                "87175310462106073678594642380840586067")));
+        // System.out.println(BigInteger.ONE.shiftLeft(254).subtract(new BigInteger(
+        //         "87175310462106073678594642380840586067")));
 
-        System.out.println("r: " + ed.getR());
-        System.out.println("s: " + s);
-        System.out.println("V: " + V);
-        System.out.println("P: " + ed.getP());
+        // System.out.println("r: " + ed.getR());
+        // System.out.println("s: " + s);
+        // System.out.println("V: " + V);
+        // System.out.println("P: " + ed.getP());
 
         byte[] x = V.getX().toByteArray();
         byte[] y = V.y.toByteArray();
@@ -787,17 +787,17 @@ public class Main2 {
                 c,
                 t };
 
-        System.out.println("W: " + W);
-        System.out.println("k: " + k);
-        System.out.println("V: " + V);
-        System.out.println("Z: " + Z);
-        System.out.println("ka: " + Arrays.toString(ka));
-        System.out.println("ke: " + Arrays.toString(ke));
-        System.out.println("c: " + Arrays.toString(c));
-        System.out.println("t: " + Arrays.toString(t));
-        System.out.println("m: " + Arrays.toString(m));
-        System.out.println("BigInteger h: " + sign.h);
-        System.out.println("BigInteger z: " + sign.z);
+        // System.out.println("W: " + W);
+        // System.out.println("k: " + k);
+        // System.out.println("V: " + V);
+        // System.out.println("Z: " + Z);
+        // System.out.println("ka: " + Arrays.toString(ka));
+        // System.out.println("ke: " + Arrays.toString(ke));
+        // System.out.println("c: " + Arrays.toString(c));
+        // System.out.println("t: " + Arrays.toString(t));
+        // System.out.println("m: " + Arrays.toString(m));
+        // System.out.println("BigInteger h: " + sign.h);
+        // System.out.println("BigInteger z: " + sign.z);
 
         return out;
     }
@@ -826,7 +826,7 @@ public class Main2 {
         // reconstruct t
         byte[] t = hexStringToByteArray(inLines.get(3).strip());
 
-        System.out.println("Z: " + Z);
+        // System.out.println("Z: " + Z);
 
         // reconstruct s
         SHA3SHAKE shake = new SHA3SHAKE();
@@ -871,19 +871,19 @@ public class Main2 {
         // bonus: verify
         byte[] slice = Arrays.copyOfRange(m, 2, m.length);
         BigInteger num = new BigInteger(slice);
-        System.out.println("BigInteger signature: " + num);
+        // System.out.println("BigInteger signature: " + num);
 
-        System.out.println("Decrypted message: " + Arrays.toString(m));
+        // System.out.println("Decrypted message: " + Arrays.toString(m));
 
         if (tp.equals(t)) {
-            System.out.println("W: " + W);
-            System.out.println("Z: " + Z);
-            System.out.println("ka: " + Arrays.toString(ka));
-            System.out.println("ke: " + Arrays.toString(ke));
-            System.out.println("c: " + Arrays.toString(c));
-            System.out.println("tp: " + Arrays.toString(tp));
-            System.out.println("t: " + Arrays.toString(t));
-            System.out.println("m: " + Arrays.toString(m));
+            // System.out.println("W: " + W);
+            // System.out.println("Z: " + Z);
+            // System.out.println("ka: " + Arrays.toString(ka));
+            // System.out.println("ke: " + Arrays.toString(ke));
+            // System.out.println("c: " + Arrays.toString(c));
+            // System.out.println("tp: " + Arrays.toString(tp));
+            // System.out.println("t: " + Arrays.toString(t));
+            // System.out.println("m: " + Arrays.toString(m));
             throw new InvalidParameterException("Decryption Error.");
         }
 
