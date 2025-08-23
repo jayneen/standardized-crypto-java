@@ -39,4 +39,5 @@ The passphrase and key pair must match between all asymmetric operations.
 - Encrypted ciphertext adheres to the following format: nonce || ciphertext || MAC.
 - Invalid security level is handled via recursion, and thus if it is incorrectly entered too many times may crash the VM or cause sluggish run speeds.
 - SHA3SHAKE init() differentiates between SHA-3 and SHAKE inits internally by passing negative suffixes for SHAKE and positive for SHA-3.
+- Both SHAKE and SHA-3 algorithms pass all test vectors except Monte Carlo, where they fail on the first step.
 - Part 2 key generation: While the specifications instruct to squeeze a 256-bit byte array of passphrase via SHAKE-128, the output obtained this way does not match the provided live demo output. Instead, the current version squeezes a 512-bit byte array, which generates the same exact points on the curve as the provided output. This approach is used in keyPairMode(), generateKeypair(), and asymmetricDecryptMode().
