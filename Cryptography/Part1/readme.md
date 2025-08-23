@@ -31,3 +31,4 @@ The pass phrase must match between encryption and decryption modes.
 - Encrypted ciphertext adheres to the following format: nonce || ciphertext || MAC.
 - Invalid security level is handled via recursion, and thus if it is incorrectly entered too many times may crash the VM or cause sluggish run speeds.
 - SHA3SHAKE init() differentiates between SHA-3 and SHAKE inits internally by passing negative suffixes for SHAKE and positive for SHA-3.
+- Both SHAKE and SHA-3 algorithms pass all test vectors except Monte Carlo, where they fail on the first step.
